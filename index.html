@@ -745,19 +745,12 @@
             <input id="sliderMaxInput" type="number" value="5" min="1" aria-label="Maximum slider value" />
             <button class="tool-button" type="submit">Add Slider</button>
           </div>
-          <textarea id="sliderLabelsInput" rows="4" placeholder="Optional number descriptions, one per line. Example: 1: Needs work"></textarea>
+          <div id="sliderLabelFields" class="slider-label-fields" data-slider-label-fields aria-label="Slider number descriptions"></div>
         </form>
         <form class="editor-tool tool-panel" id="addMediaForm" hidden>
           <h3>Add media slide</h3>
-          <div class="tool-row">
-            <select id="mediaTypeSelect" aria-label="Media slide type">
-              <option value="image">Image</option>
-              <option value="video">Video</option>
-              <option value="pdf">PDF</option>
-            </select>
-            <button class="tool-button" type="submit">Add Slide</button>
-          </div>
-          <input id="mediaFileInput" type="file" accept="image/*,video/*,application/pdf" required />
+          <input id="mediaFileInput" type="file" required />
+          <button class="tool-button" type="submit">Upload Slide</button>
         </form>
       </div>
       <div class="editor-grid" id="editorGrid" aria-label="Slides in presentation order"></div>
@@ -867,9 +860,8 @@
     const sliderQuestionInput = document.querySelector('#sliderQuestionInput');
     const sliderMinInput = document.querySelector('#sliderMinInput');
     const sliderMaxInput = document.querySelector('#sliderMaxInput');
-    const sliderLabelsInput = document.querySelector('#sliderLabelsInput');
+    const sliderLabelFields = document.querySelector('#sliderLabelFields');
     const addMediaForm = document.querySelector('#addMediaForm');
-    const mediaTypeSelect = document.querySelector('#mediaTypeSelect');
     const mediaFileInput = document.querySelector('#mediaFileInput');
     let defaultSlideOrder = slideDefinitions.map((slide) => slide.id);
     const slideElementsById = new Map();
@@ -940,10 +932,10 @@
         `;
       }
 
-      if (definition.kind === 'media-pdf') {
+      if (definition.kind === 'media-pdf' || definition.kind === 'media-embed') {
         section.innerHTML = `
           <figure class="media-frame">
-            <iframe src="${definition.dataUrl}" title="${definition.title} application/pdf"></iframe>
+            <iframe src="${definition.dataUrl}" title="${definition.title}"></iframe>
           </figure>
         `;
       }
@@ -963,7 +955,7 @@
         const savedSlides = JSON.parse(localStorage.getItem(CUSTOM_SLIDES_STORAGE_KEY) || '[]');
         if (!Array.isArray(savedSlides)) return [];
         return savedSlides.filter((slide) => slide && slide.id && [
-          'custom-slider', 'media-image', 'media-video', 'media-pdf'
+          'custom-slider', 'media-image', 'media-video', 'media-pdf', 'media-embed'
         ].includes(slide.kind));
       } catch (error) {
         return [];
@@ -986,16 +978,40 @@
       renderEditorCards();
     }
 
-    function parseSliderLabels(text) {
-      return text.split('\n').reduce((labels, line) => {
-        const match = line.match(/^\s*(\d+)\s*[:\-]\s*(.+?)\s*$/);
-        if (match) labels[match[1]] = match[2];
+    function getSliderNumberRange() {
+      const min = Number(sliderMinInput.value);
+      const max = Number(sliderMaxInput.value);
+      const safeMin = Number.isFinite(min) ? Math.round(min) : 1;
+      const safeMax = Number.isFinite(max) && max >= safeMin ? Math.round(max) : safeMin;
+      return Array.from({ length: safeMax - safeMin + 1 }, (_, index) => safeMin + index);
+    }
+
+    function escapeAttribute(value = '') {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('"', '&quot;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+    }
+
+    function renderSliderLabelFields(labels = collectSliderLabels()) {
+      sliderLabelFields.innerHTML = getSliderNumberRange().map((value) => `
+        <label class="slider-label-field">
+          <span>${value}</span>
+          <input type="text" data-slider-label-value="${value}" value="${escapeAttribute(labels[value] || '')}" placeholder="Description for ${value}" />
+        </label>
+      `).join('');
+    }
+
+    function collectSliderLabels() {
+      return [...sliderLabelFields.querySelectorAll('[data-slider-label-value]')].reduce((labels, input) => {
+        if (input.value.trim()) labels[input.dataset.sliderLabelValue] = input.value.trim();
         return labels;
       }, {});
     }
 
-    function formatSliderLabels(labels = {}) {
-      return Object.entries(labels).map(([value, label]) => `${value}: ${label}`).join('\n');
+    function populateSliderLabelFields(labels = {}) {
+      renderSliderLabelFields(labels);
     }
 
     function createSliderSlide(question, min, max, labels = {}) {
@@ -1041,13 +1057,21 @@
       applySlideOrder(slideId);
     }
 
-    function createMediaSlide(mediaType, file) {
+    function getMediaKind(file) {
+      if (file.type.startsWith('image/')) return 'media-image';
+      if (file.type.startsWith('video/')) return 'media-video';
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) return 'media-pdf';
+      return 'media-embed';
+    }
+
+    function createMediaSlide(file) {
+      const kind = getMediaKind(file);
       const reader = new FileReader();
       reader.addEventListener('load', () => {
         const definition = {
-          id: `media-${mediaType}-${Date.now()}`,
-          title: file.name || `${mediaType} slide`,
-          kind: `media-${mediaType}`,
+          id: `${kind}-${Date.now()}`,
+          title: file.name || 'Uploaded slide',
+          kind: getMediaKind(file),
           mimeType: file.type,
           dataUrl: reader.result
         };
@@ -1151,7 +1175,9 @@
                   ? '<div class="slide-card-placeholder">Video</div>'
                   : definition.kind === 'media-pdf'
                     ? '<div class="slide-card-placeholder">PDF</div>'
-                    : definition.kind === 'custom-slider'
+                    : definition.kind === 'media-embed'
+                      ? '<div class="slide-card-placeholder">File</div>'
+                      : definition.kind === 'custom-slider'
                       ? `<div class="slide-card-question">${definition.question}</div>`
                       : '<div class="slide-card-question">How strong do you feel your Discipleship strategy is?</div>'}
           </div>
@@ -1241,7 +1267,7 @@
       sliderQuestionInput.value = definition.question;
       sliderMinInput.value = definition.min;
       sliderMaxInput.value = definition.max;
-      sliderLabelsInput.value = formatSliderLabels(definition.labels);
+      populateSliderLabelFields(definition.labels);
     }
 
     function moveSlide(slideId, targetIndex) {
@@ -1270,6 +1296,7 @@
       toggleAddMenu(false);
       if (tool === 'slider' && !addSliderForm.dataset.editingSlideId) {
         addSliderForm.querySelector('.tool-button').textContent = 'Add Slider';
+        renderSliderLabelFields({});
       }
       const activeForm = tool === 'slider' ? addSliderForm : addMediaForm;
       activeForm.querySelector('input, select')?.focus();
@@ -1340,6 +1367,11 @@
     addMenuOptions.forEach((option) => {
       option.addEventListener('click', () => showToolPanel(option.dataset.tool));
     });
+    [sliderMinInput, sliderMaxInput].forEach((input) => {
+      input?.addEventListener('input', () => renderSliderLabelFields());
+    });
+    renderSliderLabelFields({});
+
     document.addEventListener('click', (event) => {
       if (!addMenu.hidden && !event.target.closest('.editor-title-row')) {
         toggleAddMenu(false);
@@ -1351,7 +1383,7 @@
     });
     addSliderForm?.addEventListener('submit', (event) => {
       event.preventDefault();
-      const labels = parseSliderLabels(sliderLabelsInput.value);
+      const labels = collectSliderLabels();
       const editingSlideId = addSliderForm.dataset.editingSlideId;
       if (editingSlideId) {
         updateSliderSlide(
@@ -1374,12 +1406,13 @@
       addSliderForm.reset();
       sliderMinInput.value = '1';
       sliderMaxInput.value = '5';
+      renderSliderLabelFields({});
     });
     addMediaForm?.addEventListener('submit', (event) => {
       event.preventDefault();
       const file = mediaFileInput.files?.[0];
       if (!file) return;
-      createMediaSlide(mediaTypeSelect.value, file);
+      createMediaSlide(file);
       addMediaForm.reset();
     });
 

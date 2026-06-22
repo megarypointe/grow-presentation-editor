@@ -100,25 +100,30 @@ test('editor can add slider-question slides from a hidden panel', () => {
   assert.match(html, /id="sliderQuestionInput"/);
   assert.match(html, /id="sliderMinInput"/);
   assert.match(html, /id="sliderMaxInput"/);
-  assert.match(html, /id="sliderLabelsInput"/);
+  assert.match(html, /id="sliderLabelFields"/);
+  assert.match(html, /data-slider-label-fields/);
   assert.match(html, /class="editor-tool tool-panel"/);
   assert.match(html, /CUSTOM_SLIDES_STORAGE_KEY/);
   assert.match(html, /function createSliderSlide\(/);
-  assert.match(html, /function parseSliderLabels\(/);
-  assert.match(html, /function formatSliderLabels\(/);
+  assert.match(html, /function renderSliderLabelFields\(/);
+  assert.match(html, /function collectSliderLabels\(/);
+  assert.match(html, /function populateSliderLabelFields\(/);
+  assert.doesNotMatch(html, /id="sliderLabelsInput"|parseSliderLabels|formatSliderLabels|1: Needs work/);
   assert.match(html, /kind:\s*'custom-slider'/);
   assert.match(html, /definition\.labels/);
 });
 
-test('editor can add image, video, and PDF slides from a hidden panel', () => {
+test('add slide upload infers media type without asking the user', () => {
   assert.match(html, /id="addMediaForm"/);
-  assert.match(html, /id="mediaTypeSelect"/);
   assert.match(html, /id="mediaFileInput"/);
-  assert.match(html, /accept="image\/\*,video\/\*,application\/pdf"/);
-  assert.match(html, /function createMediaSlide\(/);
-  assert.match(html, /kind:\s*`media-\$\{mediaType\}`/);
+  assert.match(html, /type="file"/);
+  assert.doesNotMatch(html, /id="mediaTypeSelect"|aria-label="Media slide type"|<option value="image"|<option value="video"|<option value="pdf"/);
+  assert.match(html, /function getMediaKind\(file\)/);
+  assert.match(html, /createMediaSlide\(file\)/);
+  assert.match(html, /kind:\s*getMediaKind\(file\)/);
+  assert.match(html, /'media-embed'/);
   assert.match(html, /<video[\s\S]*controls/);
-  assert.match(html, /<iframe[\s\S]*application\/pdf/);
+  assert.match(html, /<iframe[\s\S]*title="\$\{definition\.title\}"/);
 });
 
 test('deck navigation uses the reordered slide list', () => {
