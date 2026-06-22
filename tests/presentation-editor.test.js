@@ -37,11 +37,13 @@ test('editor uses between-slide drop indicators instead of card highlighting', (
   assert.match(html, /function getDropIndexFromPointer\(/);
 });
 
-test('editor cards show only slide thumbnails at a consistent fixed size', () => {
+test('editor cards show only slide thumbnails with no leftover text space', () => {
   assert.doesNotMatch(html, /slide-card-meta|slide-card-number|slide-card-title|Slide \\${index \\+ 1}/);
   assert.match(html, /width:\s*220px/);
   assert.match(html, /flex:\s*0 0 220px/);
-  assert.doesNotMatch(html, /flex:\s*1 1 220px|max-width:\s*320px/);
+  assert.match(html, /align-items:\s*flex-start/);
+  assert.match(html, /min-height:\s*132px/);
+  assert.doesNotMatch(html, /flex:\s*1 1 220px|max-width:\s*320px|min-height:\s*218px/);
 });
 
 test('open presentation control is discreet', () => {

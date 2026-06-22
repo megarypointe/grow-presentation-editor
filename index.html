@@ -332,7 +332,7 @@
     .editor-grid {
       display: flex;
       flex-wrap: wrap;
-      align-items: stretch;
+      align-items: flex-start;
       padding-bottom: 32px;
     }
 
@@ -340,7 +340,6 @@
       flex: 0 0 220px;
       width: 220px;
       display: grid;
-      gap: 12px;
       margin: 8px;
       padding: 12px;
       border: 1px solid rgba(226, 232, 240, 0.2);
@@ -362,7 +361,7 @@
 
     .drop-indicator {
       flex: 0 0 16px;
-      min-height: 218px;
+      min-height: 132px;
       align-self: stretch;
       display: grid;
       place-items: center;
@@ -433,7 +432,7 @@
       .editor-header { display: grid; }
       .editor-actions { justify-content: flex-start; }
       .slide-card { flex: 0 0 150px; width: 150px; margin: 6px; padding: 9px; }
-      .drop-indicator { flex-basis: 14px; min-height: 168px; margin: 6px -7px; }
+      .drop-indicator { flex-basis: 14px; min-height: 99px; margin: 6px -7px; }
     }
   </style>
 </head>
