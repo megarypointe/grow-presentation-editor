@@ -227,8 +227,7 @@
     }
 
     .toolbar-button,
-    .editor-button,
-    .mini-button {
+    .editor-button {
       border: 0;
       border-radius: 999px;
       cursor: pointer;
@@ -319,15 +318,19 @@
     }
 
     .editor-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
       padding-bottom: 32px;
     }
 
     .slide-card {
+      flex: 1 1 220px;
+      max-width: 320px;
+      min-width: 220px;
       display: grid;
       gap: 12px;
+      margin: 8px;
       padding: 12px;
       border: 1px solid rgba(226, 232, 240, 0.2);
       border-radius: 18px;
@@ -346,9 +349,39 @@
       transform: scale(0.985);
     }
 
-    .slide-card.drop-target {
-      border-color: #60a5fa;
-      box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.22), 0 16px 42px rgba(0, 0, 0, 0.24);
+    .drop-indicator {
+      flex: 0 0 16px;
+      min-height: 218px;
+      align-self: stretch;
+      display: grid;
+      place-items: center;
+      margin: 8px -8px;
+      border-radius: 999px;
+      opacity: 0.35;
+      pointer-events: auto;
+      transition: opacity 140ms ease, transform 140ms ease;
+    }
+
+    .drop-indicator::before {
+      content: '';
+      width: 4px;
+      height: 100%;
+      min-height: 120px;
+      border-radius: 999px;
+      background: transparent;
+      box-shadow: none;
+      transition: background 140ms ease, box-shadow 140ms ease, width 140ms ease;
+    }
+
+    .drop-indicator.active {
+      opacity: 1;
+      transform: scaleX(1.35);
+    }
+
+    .drop-indicator.active::before {
+      width: 6px;
+      background: #60a5fa;
+      box-shadow: 0 0 0 6px rgba(96, 165, 250, 0.24), 0 0 24px rgba(96, 165, 250, 0.7);
     }
 
     .slide-card-preview {
@@ -401,30 +434,6 @@
       line-height: 1.2;
     }
 
-    .slide-card-controls {
-      display: flex;
-      gap: 8px;
-    }
-
-    .mini-button {
-      flex: 1;
-      padding: 7px 10px;
-      background: rgba(255, 255, 255, 0.1);
-      color: #e5e7eb;
-    }
-
-    .mini-button:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
-    }
-
-    .mini-button:not(:disabled):hover,
-    .mini-button:not(:disabled):focus-visible {
-      background: rgba(255, 255, 255, 0.18);
-      outline: 2px solid rgba(96, 165, 250, 0.55);
-      outline-offset: 2px;
-    }
-
     @media (max-width: 760px) {
       .slide { inset: 12px; }
       .pdf-frame { width: calc(100vw - 28px); max-height: calc(100vh - 104px); }
@@ -432,9 +441,8 @@
       .toolbar-button { padding: 9px 12px; font-size: 0.9rem; }
       .editor-header { display: grid; }
       .editor-actions { justify-content: flex-start; }
-      .editor-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-      .slide-card { padding: 9px; }
-      .mini-button { padding: 7px 6px; }
+      .slide-card { flex-basis: 150px; min-width: 150px; margin: 6px; padding: 9px; }
+      .drop-indicator { flex-basis: 14px; min-height: 168px; margin: 6px -7px; }
     }
   </style>
 </head>
@@ -569,9 +577,51 @@
       updateDeck();
     }
 
+    function renderDropIndicators(dropIndex) {
+      const indicator = document.createElement('div');
+      indicator.className = 'drop-indicator';
+      indicator.dataset.dropIndex = dropIndex;
+      indicator.setAttribute('aria-hidden', 'true');
+
+      indicator.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        setActiveDropIndicator(dropIndex);
+      });
+
+      indicator.addEventListener('drop', (event) => {
+        event.preventDefault();
+        const droppedSlideId = event.dataTransfer.getData('text/plain') || draggedSlideId;
+        if (droppedSlideId) {
+          moveSlide(droppedSlideId, dropIndex);
+        }
+      });
+
+      return indicator;
+    }
+
+    function setActiveDropIndicator(dropIndex) {
+      editorGrid.querySelectorAll('.drop-indicator').forEach((indicator) => {
+        indicator.classList.toggle('active', Number(indicator.dataset.dropIndex) === dropIndex);
+      });
+    }
+
+    function clearActiveDropIndicator() {
+      editorGrid.querySelectorAll('.drop-indicator.active').forEach((indicator) => {
+        indicator.classList.remove('active');
+      });
+    }
+
+    function getDropIndexFromPointer(card, event, cardIndex) {
+      const rect = card.getBoundingClientRect();
+      const isAfterCardMidpoint = event.clientX > rect.left + rect.width / 2;
+      return cardIndex + (isAfterCardMidpoint ? 1 : 0);
+    }
+
     function renderEditorCards() {
       editorGrid.innerHTML = '';
       slideOrder.forEach((slideId, index) => {
+        editorGrid.appendChild(renderDropIndicators(index));
         const definition = slideDefinitions.find((slide) => slide.id === slideId);
         const card = document.createElement('article');
         card.className = 'slide-card';
@@ -588,10 +638,6 @@
             <span class="slide-card-number">Slide ${index + 1}</span>
             <span class="slide-card-title">${definition.title}</span>
           </div>
-          <div class="slide-card-controls">
-            <button class="mini-button" type="button" data-move="up" ${index === 0 ? 'disabled' : ''}>Up</button>
-            <button class="mini-button" type="button" data-move="down" ${index === slideOrder.length - 1 ? 'disabled' : ''}>Down</button>
-          </div>
         `;
 
         card.addEventListener('dragstart', (event) => {
@@ -604,35 +650,26 @@
         card.addEventListener('dragend', () => {
           draggedSlideId = null;
           card.classList.remove('dragging');
-          editorGrid.querySelectorAll('.drop-target').forEach((target) => target.classList.remove('drop-target'));
+          clearActiveDropIndicator();
         });
 
         card.addEventListener('dragover', (event) => {
           event.preventDefault();
-          if (draggedSlideId && draggedSlideId !== slideId) {
-            card.classList.add('drop-target');
-            event.dataTransfer.dropEffect = 'move';
-          }
-        });
-
-        card.addEventListener('dragleave', () => {
-          card.classList.remove('drop-target');
+          event.dataTransfer.dropEffect = 'move';
+          setActiveDropIndicator(getDropIndexFromPointer(card, event, index));
         });
 
         card.addEventListener('drop', (event) => {
           event.preventDefault();
-          card.classList.remove('drop-target');
           const droppedSlideId = event.dataTransfer.getData('text/plain') || draggedSlideId;
-          if (droppedSlideId && droppedSlideId !== slideId) {
-            moveSlide(droppedSlideId, slideOrder.indexOf(slideId));
+          if (droppedSlideId) {
+            moveSlide(droppedSlideId, getDropIndexFromPointer(card, event, index));
           }
         });
 
-        card.querySelector('[data-move="up"]').addEventListener('click', () => moveSlide(slideId, index - 1));
-        card.querySelector('[data-move="down"]').addEventListener('click', () => moveSlide(slideId, index + 1));
-
         editorGrid.appendChild(card);
       });
+      editorGrid.appendChild(renderDropIndicators(slideOrder.length));
     }
 
     function moveSlide(slideId, targetIndex) {
@@ -654,7 +691,7 @@
       editor.setAttribute('aria-hidden', 'false');
       openEditorButton.hidden = true;
       renderEditorCards();
-      editorStatus.textContent = 'Drag a card onto another card, or use Up/Down buttons.';
+      editorStatus.textContent = 'Drag a card between slides to choose exactly where it will land.';
       exitEditorButton.focus();
     }
 
@@ -742,7 +779,7 @@
     updateScore();
     applySlideOrder(slideOrder[0]);
     renderEditorCards();
-    editorStatus.textContent = 'Drag a card onto another card, or use Up/Down buttons.';
+    editorStatus.textContent = 'Drag a card between slides to choose exactly where it will land.';
   </script>
 </body>
 </html>

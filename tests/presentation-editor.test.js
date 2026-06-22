@@ -28,6 +28,15 @@ test('slides are draggable and dropped order is persisted', () => {
   assert.match(html, /localStorage\.setItem\(ORDER_STORAGE_KEY/);
 });
 
+test('editor uses between-slide drop indicators instead of card highlighting', () => {
+  assert.doesNotMatch(html, /data-move=|>Up<|>Down<|slide-card-controls|mini-button/);
+  assert.doesNotMatch(html, /drop-target/);
+  assert.match(html, /drop-indicator/);
+  assert.match(html, /function renderDropIndicators\(/);
+  assert.match(html, /function setActiveDropIndicator\(/);
+  assert.match(html, /function getDropIndexFromPointer\(/);
+});
+
 test('deck navigation uses the reordered slide list', () => {
   assert.match(html, /let slides = \[\]/);
   assert.match(html, /function applySlideOrder\(/);
