@@ -119,6 +119,7 @@
       text-transform: uppercase;
     }
 
+    .score-value,
     #scoreValue {
       font-size: 4.4rem;
       line-height: 1;
@@ -701,7 +702,7 @@
 
         <section class="score-card" aria-live="polite">
           <span class="score-label">Your score</span>
-          <span id="scoreValue">3</span>
+          <span id="scoreValue" class="score-value">3</span>
         </section>
 
         <div class="slider-wrap">
@@ -766,6 +767,64 @@
   <script>
     const ORDER_STORAGE_KEY = 'discipleshipPresentationSlideOrder';
     const CUSTOM_SLIDES_STORAGE_KEY = 'discipleshipPresentationCustomSlides';
+    const BASE_SLIDER_STORAGE_KEY = 'discipleshipPresentationBaseSlider';
+
+
+    function getDefaultBaseSliderDefinition() {
+      return {
+        question: 'How strong do you feel your Discipleship strategy is?',
+        min: 1,
+        max: 5,
+        value: 3,
+        labels: {
+          1: 'Needs significant attention.',
+          2: 'Some pieces are present, but gaps remain.',
+          3: 'Moderately strong with room to grow.',
+          4: 'Strong and mostly intentional.',
+          5: 'Very strong, clear, and repeatable.'
+        }
+      };
+    }
+
+    function loadBaseSliderDefinition() {
+      const fallback = getDefaultBaseSliderDefinition();
+      try {
+        const saved = JSON.parse(localStorage.getItem(BASE_SLIDER_STORAGE_KEY) || 'null');
+        if (!saved || typeof saved !== 'object') return fallback;
+        const min = Number.isFinite(Number(saved.min)) ? Number(saved.min) : fallback.min;
+        const max = Number.isFinite(Number(saved.max)) && Number(saved.max) > min ? Number(saved.max) : fallback.max;
+        const value = Number.isFinite(Number(saved.value)) ? Math.max(min, Math.min(Number(saved.value), max)) : fallback.value;
+        return {
+          question: String(saved.question || fallback.question),
+          min,
+          max,
+          value,
+          labels: saved.labels && typeof saved.labels === 'object' ? saved.labels : fallback.labels
+        };
+      } catch (error) {
+        return fallback;
+      }
+    }
+
+    function saveBaseSliderDefinition(definition) {
+      if (definition.id !== 'strategy-slider') return;
+      localStorage.setItem(BASE_SLIDER_STORAGE_KEY, JSON.stringify({
+        question: definition.question,
+        min: definition.min,
+        max: definition.max,
+        value: definition.value,
+        labels: definition.labels || {}
+      }));
+    }
+
+    function syncBaseSliderElement() {
+      const definition = slideDefinitions.find((slide) => slide.id === 'strategy-slider');
+      const oldElement = slideElementsById.get('strategy-slider');
+      if (!definition || !oldElement) return;
+      const newElement = buildSlideElement(definition, 0);
+      oldElement.replaceWith(newElement);
+      slideElementsById.set('strategy-slider', newElement);
+    }
 
     const pdfSlides = [
       "page-003.webp", "page-004.webp", "page-005.webp",
@@ -781,7 +840,8 @@
       {
         id: 'strategy-slider',
         title: 'Discipleship Strategy Slider',
-        kind: 'custom'
+        ...loadBaseSliderDefinition(),
+        kind: 'custom-slider'
       },
       ...pdfSlides.map((file, index) => ({
         id: `pdf-${index + 1}`,
@@ -819,6 +879,7 @@
     let draggedSlideId = null;
 
     slideElementsById.set('strategy-slider', document.querySelector('[data-slide-id="strategy-slider"]'));
+    syncBaseSliderElement();
 
     function buildSlideElement(definition, index) {
       const section = document.createElement('section');
@@ -844,7 +905,7 @@
             <h1>${definition.question}</h1>
             <section class="score-card" aria-live="polite">
               <span class="score-label">Your score</span>
-              <span id="${scoreId}">${definition.value}</span>
+              <span id="${scoreId}" class="score-value">${definition.value}</span>
             </section>
             <div class="slider-wrap">
               <label class="sr-only" for="${inputId}">${definition.question}</label>
@@ -954,7 +1015,7 @@
     }
 
     function updateSliderSlide(slideId, question, min, max, labels = {}) {
-      const definition = customSlides.find((slide) => slide.id === slideId);
+      const definition = slideDefinitions.find((slide) => slide.id === slideId);
       if (!definition) return;
       definition.title = question;
       definition.question = question;
@@ -962,7 +1023,16 @@
       definition.max = Number.isFinite(max) && max > definition.min ? max : definition.max;
       definition.value = Math.max(definition.min, Math.min(definition.value, definition.max));
       definition.labels = labels;
-      saveCustomSlides();
+      saveBaseSliderDefinition(definition);
+      if (slideId === 'strategy-slider') {
+        syncBaseSliderElement();
+        renderEditorCards();
+        applySlideOrder(slideId);
+        return;
+      }
+      if (customSlides.some((slide) => slide.id === slideId)) {
+        saveCustomSlides();
+      }
       const oldElement = slideElementsById.get(slideId);
       const newElement = buildSlideElement(definition, slideDefinitions.findIndex((slide) => slide.id === slideId));
       oldElement?.replaceWith(newElement);
@@ -1163,7 +1233,7 @@
     }
 
     function editSlider(slideId) {
-      const definition = customSlides.find((slide) => slide.id === slideId);
+      const definition = slideDefinitions.find((slide) => slide.id === slideId);
       if (!definition) return;
       showToolPanel('slider');
       addSliderForm.dataset.editingSlideId = slideId;
@@ -1330,8 +1400,10 @@
       helperText.textContent = labels[slider.value];
     }
 
-    slider.addEventListener('input', updateScore);
-    updateScore();
+    if (slider && scoreValue && helperText) {
+      slider.addEventListener('input', updateScore);
+      updateScore();
+    }
     applySlideOrder(slideOrder[0]);
     renderEditorCards();
   </script>

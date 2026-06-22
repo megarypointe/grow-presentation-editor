@@ -56,9 +56,27 @@ test('cards have contextual menus for edit and delete', () => {
   assert.match(html, /card-menu-button/);
   assert.match(html, /data-card-action="delete"/);
   assert.match(html, /data-card-action="edit"/);
+  assert.match(html, /const canEdit = definition\.kind === 'custom-slider'/);
+  assert.match(html, /id:\s*'strategy-slider'[\s\S]*kind:\s*'custom-slider'/);
   assert.match(html, /function toggleCardMenu\(/);
   assert.match(html, /function deleteSlide\(/);
   assert.match(html, /function editSlider\(/);
+});
+
+test('all slider scores use the same large score style', () => {
+  assert.match(html, /\.score-value,\s*#scoreValue/);
+  assert.match(html, /<span id="scoreValue" class="score-value">3<\/span>/);
+  assert.match(html, /<span id="\$\{scoreId\}" class="score-value">/);
+});
+
+test('original strategy slider edits are persisted and rehydrated', () => {
+  assert.match(html, /BASE_SLIDER_STORAGE_KEY/);
+  assert.match(html, /function loadBaseSliderDefinition\(/);
+  assert.match(html, /function saveBaseSliderDefinition\(/);
+  assert.match(html, /function syncBaseSliderElement\(/);
+  assert.match(html, /id:\s*'strategy-slider'[\s\S]*\.\.\.loadBaseSliderDefinition\(\)/);
+  assert.match(html, /saveBaseSliderDefinition\(definition\)/);
+  assert.match(html, /syncBaseSliderElement\(\)/);
 });
 
 test('open presentation control is discreet and page description is removed', () => {
