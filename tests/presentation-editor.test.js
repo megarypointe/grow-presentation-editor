@@ -46,9 +46,10 @@ test('editor cards show only slide thumbnails with no leftover text space', () =
   assert.doesNotMatch(html, /flex:\s*1 1 220px|max-width:\s*320px|min-height:\s*218px/);
 });
 
-test('open presentation control is discreet', () => {
+test('open presentation control is discreet and page description is removed', () => {
   assert.match(html, /id="exitEditorButton"[^>]*class="editor-link"/);
   assert.doesNotMatch(html, /id="exitEditorButton"[^>]*class="[^"]*primary/);
+  assert.doesNotMatch(html, /Drag a card between slides to choose exactly where it will land\./);
 });
 
 test('editor has a plus menu next to the title for adding slides', () => {
