@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grow Presentation</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0b1020;
+      --panel: rgba(255, 255, 255, 0.94);
+      --ink: #111827;
+      --muted: #64748b;
+      --blue: #2563eb;
+      --blue-dark: #1d4ed8;
+      --chrome: rgba(15, 23, 42, 0.76);
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      min-height: 100vh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: white;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(59, 130, 246, 0.24), transparent 34rem),
+        radial-gradient(circle at 92% 12%, rgba(168, 85, 247, 0.18), transparent 28rem),
+        var(--bg);
+    }
+
+    body.editor-open {
+      overflow: auto;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      padding: clamp(14px, 2vw, 28px);
+    }
+
+    body.editor-open .deck {
+      display: none;
+    }
+
+    .slide {
+      position: absolute;
+      inset: clamp(14px, 2vw, 28px);
+      display: grid;
+      place-items: center;
+      opacity: 0;
+      transform: translateX(22px) scale(0.992);
+      pointer-events: none;
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .slider-slide main {
+      width: min(860px, 100%);
+      background: var(--panel);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 30px;
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.32);
+      padding: clamp(30px, 6vw, 64px);
+      text-align: center;
+      color: var(--ink);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      margin-bottom: 18px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: var(--blue-dark);
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 720px;
+      margin: 0 auto 34px;
+      font-size: clamp(2rem, 5vw, 3.75rem);
+      line-height: 1.04;
+      letter-spacing: -0.05em;
+      color: var(--ink);
+    }
+
+    .score-card {
+      display: inline-grid;
+      gap: 4px;
+      min-width: 132px;
+      margin-bottom: 34px;
+      padding: 18px 28px;
+      border-radius: 22px;
+      background: #111827;
+      color: white;
+      box-shadow: 0 18px 32px rgba(17, 24, 39, 0.24);
+    }
+
+    .score-label {
+      color: #cbd5e1;
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    #scoreValue {
+      font-size: 4.4rem;
+      line-height: 1;
+      font-weight: 850;
+      letter-spacing: -0.08em;
+    }
+
+    .slider-wrap {
+      display: grid;
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--blue);
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #dbeafe, var(--blue));
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      width: 34px;
+      height: 34px;
+      margin-top: -11px;
+      border: 4px solid white;
+      border-radius: 50%;
+      background: var(--blue-dark);
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.38);
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #dbeafe, var(--blue));
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 28px;
+      height: 28px;
+      border: 4px solid white;
+      border-radius: 50%;
+      background: var(--blue-dark);
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.38);
+    }
+
+    .scale {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-weight: 850;
+    }
+
+    .helper-text {
+      margin-top: 22px;
+      color: #475569;
+      font-size: 1.08rem;
+    }
+
+    .pdf-frame {
+      width: min(100%, calc((100vh - 120px) * 16 / 9));
+      max-height: calc(100vh - 92px);
+      aspect-ratio: 16 / 9;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #111827;
+      box-shadow: 0 26px 80px rgba(0, 0, 0, 0.42);
+    }
+
+    .pdf-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #111827;
+    }
+
+    .presentation-toolbar {
+      position: fixed;
+      z-index: 20;
+      top: 18px;
+      right: 18px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .toolbar-button,
+    .editor-button,
+    .mini-button {
+      border: 0;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 850;
+    }
+
+    .toolbar-button,
+    .editor-button {
+      padding: 11px 16px;
+      background: rgba(255, 255, 255, 0.94);
+      color: #0f172a;
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.22);
+    }
+
+    .toolbar-button:hover,
+    .editor-button:hover,
+    .toolbar-button:focus-visible,
+    .editor-button:focus-visible {
+      background: white;
+      outline: 3px solid rgba(96, 165, 250, 0.55);
+      outline-offset: 2px;
+    }
+
+    .editor-button.primary {
+      background: var(--blue);
+      color: white;
+    }
+
+    .editor-button.danger {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .presentation-editor {
+      display: none;
+      min-height: 100vh;
+      padding: clamp(18px, 3vw, 36px);
+      color: #e5e7eb;
+    }
+
+    body.editor-open .presentation-editor {
+      display: block;
+    }
+
+    .editor-shell {
+      width: min(1460px, 100%);
+      margin: 0 auto;
+    }
+
+    .editor-header {
+      display: flex;
+      gap: 18px;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 22px;
+    }
+
+    .editor-title-block {
+      display: grid;
+      gap: 8px;
+    }
+
+    .editor-title-block h2 {
+      font-size: clamp(2rem, 4vw, 3.6rem);
+      line-height: 1;
+      letter-spacing: -0.055em;
+    }
+
+    .editor-title-block p {
+      max-width: 720px;
+      color: #cbd5e1;
+      font-size: 1.05rem;
+      line-height: 1.5;
+    }
+
+    .editor-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .editor-status {
+      min-height: 1.4em;
+      margin-bottom: 18px;
+      color: #bfdbfe;
+      font-weight: 750;
+    }
+
+    .editor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      padding-bottom: 32px;
+    }
+
+    .slide-card {
+      display: grid;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid rgba(226, 232, 240, 0.2);
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.78);
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.24);
+      cursor: grab;
+      transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+    }
+
+    .slide-card:active {
+      cursor: grabbing;
+    }
+
+    .slide-card.dragging {
+      opacity: 0.55;
+      transform: scale(0.985);
+    }
+
+    .slide-card.drop-target {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.22), 0 16px 42px rgba(0, 0, 0, 0.24);
+    }
+
+    .slide-card-preview {
+      aspect-ratio: 16 / 9;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #111827;
+    }
+
+    .slide-card-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .slide-card-placeholder {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: linear-gradient(135deg, #eff6ff, #dbeafe);
+      color: var(--blue-dark);
+      text-align: center;
+      font-size: 1.25rem;
+      font-weight: 900;
+      letter-spacing: -0.035em;
+    }
+
+    .slide-card-meta {
+      display: grid;
+      gap: 4px;
+    }
+
+    .slide-card-number {
+      color: #93c5fd;
+      font-size: 0.8rem;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .slide-card-title {
+      color: white;
+      font-size: 1rem;
+      font-weight: 850;
+      line-height: 1.2;
+    }
+
+    .slide-card-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .mini-button {
+      flex: 1;
+      padding: 7px 10px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #e5e7eb;
+    }
+
+    .mini-button:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .mini-button:not(:disabled):hover,
+    .mini-button:not(:disabled):focus-visible {
+      background: rgba(255, 255, 255, 0.18);
+      outline: 2px solid rgba(96, 165, 250, 0.55);
+      outline-offset: 2px;
+    }
+
+    @media (max-width: 760px) {
+      .slide { inset: 12px; }
+      .pdf-frame { width: calc(100vw - 28px); max-height: calc(100vh - 104px); }
+      .presentation-toolbar { top: 10px; right: 10px; }
+      .toolbar-button { padding: 9px 12px; font-size: 0.9rem; }
+      .editor-header { display: grid; }
+      .editor-actions { justify-content: flex-start; }
+      .editor-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+      .slide-card { padding: 9px; }
+      .mini-button { padding: 7px 6px; }
+    }
+  </style>
+</head>
+<body class="editor-open">
+  <div class="presentation-toolbar" aria-label="Presentation tools">
+    <button class="toolbar-button" id="openEditorButton" type="button" hidden>Presentation Editor</button>
+  </div>
+
+  <div class="deck" id="deck" aria-live="polite">
+    <section class="slide slider-slide active" data-slide-id="strategy-slider" data-title="Discipleship Strategy Slider">
+      <main>
+        <div class="eyebrow">Self-assessment</div>
+        <h1>How strong do you feel your Discipleship strategy is?</h1>
+
+        <section class="score-card" aria-live="polite">
+          <span class="score-label">Your score</span>
+          <span id="scoreValue">3</span>
+        </section>
+
+        <div class="slider-wrap">
+          <label class="sr-only" for="discipleshipScore">Discipleship strategy strength from 1 to 5</label>
+          <input id="discipleshipScore" type="range" min="1" max="5" step="1" value="3" />
+          <div class="scale" aria-hidden="true">
+            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+          </div>
+        </div>
+
+        <p class="helper-text" id="helperText">Move the slider to rate your current strategy.</p>
+      </main>
+    </section>
+  </div>
+
+  <section class="presentation-editor" id="presentationEditor" aria-label="Presentation Editor" aria-hidden="false">
+    <div class="editor-shell">
+      <header class="editor-header">
+        <div class="editor-title-block">
+          <h2>Presentation Editor</h2>
+          <p>Drag and drop the slide cards to change the presentation order. The new order is saved in this browser and is used immediately on the live presentation page.</p>
+        </div>
+        <div class="editor-actions">
+          <button class="editor-button danger" id="resetOrderButton" type="button">Reset Order</button>
+          <button class="editor-button primary" id="exitEditorButton" type="button">Open Presentation</button>
+        </div>
+      </header>
+      <p class="editor-status" id="editorStatus" aria-live="polite"></p>
+      <div class="editor-grid" id="editorGrid" aria-label="Slides in presentation order"></div>
+    </div>
+  </section>
+
+  <script>
+    const ORDER_STORAGE_KEY = 'discipleshipPresentationSlideOrder';
+
+    const pdfSlides = [
+      "page-003.webp", "page-004.webp", "page-005.webp",
+      "page-006.webp", "page-007.webp", "page-008.webp", "page-009.webp", "page-010.webp",
+      "page-011.webp", "page-012.webp", "page-013.webp", "page-014.webp", "page-015.webp",
+      "page-016.webp", "page-017.webp", "page-018.webp", "page-019.webp", "page-020.webp",
+      "page-021.webp", "page-022.webp", "page-023.webp", "page-024.webp", "page-025.webp",
+      "page-026.webp", "page-027.webp", "page-028.webp", "page-029.webp", "page-030.webp",
+      "page-031.webp", "page-032.webp", "page-033.webp", "page-034.webp"
+    ];
+
+    const slideDefinitions = [
+      {
+        id: 'strategy-slider',
+        title: 'Discipleship Strategy Slider',
+        kind: 'custom'
+      },
+      ...pdfSlides.map((file, index) => ({
+        id: `pdf-${index + 1}`,
+        title: `PDF slide ${index + 1}`,
+        file,
+        kind: 'image'
+      }))
+    ];
+
+    const deck = document.querySelector('#deck');
+    const editor = document.querySelector('#presentationEditor');
+    const editorGrid = document.querySelector('#editorGrid');
+    const editorStatus = document.querySelector('#editorStatus');
+    const openEditorButton = document.querySelector('#openEditorButton');
+    const exitEditorButton = document.querySelector('#exitEditorButton');
+    const resetOrderButton = document.querySelector('#resetOrderButton');
+    const defaultSlideOrder = slideDefinitions.map((slide) => slide.id);
+    const slideElementsById = new Map();
+    let slideOrder = loadSlideOrder();
+    let slides = [];
+    let currentSlide = 0;
+    let draggedSlideId = null;
+
+    slideElementsById.set('strategy-slider', document.querySelector('[data-slide-id="strategy-slider"]'));
+
+    pdfSlides.forEach((file, index) => {
+      const section = document.createElement('section');
+      section.className = 'slide pdf-slide';
+      section.dataset.slideId = `pdf-${index + 1}`;
+      section.dataset.title = `PDF slide ${index + 1}`;
+      section.innerHTML = `
+        <figure class="pdf-frame">
+          <img src="assets/slides/${file}" alt="Webinar slide ${index + 1}" loading="lazy" decoding="async" />
+        </figure>
+      `;
+      deck.appendChild(section);
+      slideElementsById.set(section.dataset.slideId, section);
+    });
+
+    function loadSlideOrder() {
+      try {
+        const savedOrder = JSON.parse(localStorage.getItem(ORDER_STORAGE_KEY) || '[]');
+        const savedIds = Array.isArray(savedOrder) ? savedOrder.filter((id) => defaultSlideOrder.includes(id)) : [];
+        return [
+          ...savedIds,
+          ...defaultSlideOrder.filter((id) => !savedIds.includes(id))
+        ];
+      } catch (error) {
+        return [...defaultSlideOrder];
+      }
+    }
+
+    function persistSlideOrder() {
+      localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(slideOrder));
+      editorStatus.textContent = `Saved order for ${slideOrder.length} slides.`;
+    }
+
+    function applySlideOrder(keepCurrentSlideId = slideOrder[currentSlide]) {
+      slideOrder.forEach((slideId) => {
+        deck.appendChild(slideElementsById.get(slideId));
+      });
+      slides = slideOrder.map((slideId) => slideElementsById.get(slideId));
+      const newCurrentIndex = slideOrder.indexOf(keepCurrentSlideId);
+      currentSlide = newCurrentIndex >= 0 ? newCurrentIndex : Math.min(currentSlide, slides.length - 1);
+      updateDeck();
+    }
+
+    function renderEditorCards() {
+      editorGrid.innerHTML = '';
+      slideOrder.forEach((slideId, index) => {
+        const definition = slideDefinitions.find((slide) => slide.id === slideId);
+        const card = document.createElement('article');
+        card.className = 'slide-card';
+        card.draggable = true;
+        card.setAttribute('draggable', 'true');
+        card.dataset.slideId = slideId;
+        card.innerHTML = `
+          <div class="slide-card-preview">
+            ${definition.kind === 'image'
+              ? `<img src="assets/slides/${definition.file}" alt="${definition.title} thumbnail" loading="lazy" decoding="async" />`
+              : '<div class="slide-card-placeholder">Self-assessment slider</div>'}
+          </div>
+          <div class="slide-card-meta">
+            <span class="slide-card-number">Slide ${index + 1}</span>
+            <span class="slide-card-title">${definition.title}</span>
+          </div>
+          <div class="slide-card-controls">
+            <button class="mini-button" type="button" data-move="up" ${index === 0 ? 'disabled' : ''}>Up</button>
+            <button class="mini-button" type="button" data-move="down" ${index === slideOrder.length - 1 ? 'disabled' : ''}>Down</button>
+          </div>
+        `;
+
+        card.addEventListener('dragstart', (event) => {
+          draggedSlideId = slideId;
+          card.classList.add('dragging');
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain', slideId);
+        });
+
+        card.addEventListener('dragend', () => {
+          draggedSlideId = null;
+          card.classList.remove('dragging');
+          editorGrid.querySelectorAll('.drop-target').forEach((target) => target.classList.remove('drop-target'));
+        });
+
+        card.addEventListener('dragover', (event) => {
+          event.preventDefault();
+          if (draggedSlideId && draggedSlideId !== slideId) {
+            card.classList.add('drop-target');
+            event.dataTransfer.dropEffect = 'move';
+          }
+        });
+
+        card.addEventListener('dragleave', () => {
+          card.classList.remove('drop-target');
+        });
+
+        card.addEventListener('drop', (event) => {
+          event.preventDefault();
+          card.classList.remove('drop-target');
+          const droppedSlideId = event.dataTransfer.getData('text/plain') || draggedSlideId;
+          if (droppedSlideId && droppedSlideId !== slideId) {
+            moveSlide(droppedSlideId, slideOrder.indexOf(slideId));
+          }
+        });
+
+        card.querySelector('[data-move="up"]').addEventListener('click', () => moveSlide(slideId, index - 1));
+        card.querySelector('[data-move="down"]').addEventListener('click', () => moveSlide(slideId, index + 1));
+
+        editorGrid.appendChild(card);
+      });
+    }
+
+    function moveSlide(slideId, targetIndex) {
+      const fromIndex = slideOrder.indexOf(slideId);
+      if (fromIndex < 0 || targetIndex < 0 || targetIndex >= slideOrder.length || fromIndex === targetIndex) {
+        return;
+      }
+
+      const adjustedTargetIndex = fromIndex < targetIndex ? targetIndex - 1 : targetIndex;
+      const [movedSlide] = slideOrder.splice(fromIndex, 1);
+      slideOrder.splice(adjustedTargetIndex, 0, movedSlide);
+      persistSlideOrder();
+      applySlideOrder(movedSlide);
+      renderEditorCards();
+    }
+
+    function openEditor() {
+      document.body.classList.add('editor-open');
+      editor.setAttribute('aria-hidden', 'false');
+      openEditorButton.hidden = true;
+      renderEditorCards();
+      editorStatus.textContent = 'Drag a card onto another card, or use Up/Down buttons.';
+      exitEditorButton.focus();
+    }
+
+    function closeEditor() {
+      window.location.href = 'https://megarypointe.github.io/grow-presentation/';
+    }
+
+    function resetSlideOrder() {
+      slideOrder = [...defaultSlideOrder];
+      persistSlideOrder();
+      applySlideOrder(slideOrder[0]);
+      renderEditorCards();
+      editorStatus.textContent = 'Slide order reset to the original deck order.';
+    }
+
+    function updateDeck() {
+      slides.forEach((slide, index) => {
+        slide.classList.toggle('active', index === currentSlide);
+        slide.setAttribute('aria-hidden', index === currentSlide ? 'false' : 'true');
+      });
+
+      // Preload the next/previous slide image to keep navigation smooth.
+      [currentSlide + 1, currentSlide - 1].forEach((index) => {
+        const img = slides[index]?.querySelector('img');
+        if (img) {
+          const preload = new Image();
+          preload.src = img.src;
+        }
+      });
+    }
+
+    function goToSlide(index) {
+      currentSlide = Math.max(0, Math.min(index, slides.length - 1));
+      updateDeck();
+    }
+
+    function nextSlide() { goToSlide(currentSlide + 1); }
+    function prevSlide() { goToSlide(currentSlide - 1); }
+
+    window.addEventListener('keydown', (event) => {
+      if (document.body.classList.contains('editor-open')) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeEditor();
+        }
+        return;
+      }
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        nextSlide();
+      }
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        prevSlide();
+      }
+      if (event.key.toLowerCase() === 'e') {
+        event.preventDefault();
+        openEditor();
+      }
+    });
+
+    openEditorButton.addEventListener('click', openEditor);
+    exitEditorButton.addEventListener('click', closeEditor);
+    resetOrderButton.addEventListener('click', resetSlideOrder);
+
+    const slider = document.querySelector('#discipleshipScore');
+    const scoreValue = document.querySelector('#scoreValue');
+    const helperText = document.querySelector('#helperText');
+
+    const labels = {
+      1: 'Needs significant attention.',
+      2: 'Some pieces are present, but gaps remain.',
+      3: 'Moderately strong with room to grow.',
+      4: 'Strong and mostly intentional.',
+      5: 'Very strong, clear, and repeatable.'
+    };
+
+    function updateScore() {
+      scoreValue.textContent = slider.value;
+      helperText.textContent = labels[slider.value];
+    }
+
+    slider.addEventListener('input', updateScore);
+    updateScore();
+    applySlideOrder(slideOrder[0]);
+    renderEditorCards();
+    editorStatus.textContent = 'Drag a card onto another card, or use Up/Down buttons.';
+  </script>
+</body>
+</html>
