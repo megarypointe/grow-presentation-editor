@@ -251,14 +251,26 @@
       outline-offset: 2px;
     }
 
-    .editor-button.primary {
-      background: var(--blue);
-      color: white;
+    .editor-link {
+      border: 0;
+      border-radius: 999px;
+      padding: 7px 11px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #cbd5e1;
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 750;
+      text-decoration: none;
+      box-shadow: none;
     }
 
-    .editor-button.danger {
-      background: #fee2e2;
-      color: #991b1b;
+    .editor-link:hover,
+    .editor-link:focus-visible {
+      background: rgba(255, 255, 255, 0.14);
+      color: white;
+      outline: 2px solid rgba(96, 165, 250, 0.45);
+      outline-offset: 2px;
     }
 
     .presentation-editor {
@@ -325,9 +337,8 @@
     }
 
     .slide-card {
-      flex: 1 1 220px;
-      max-width: 320px;
-      min-width: 220px;
+      flex: 0 0 220px;
+      width: 220px;
       display: grid;
       gap: 12px;
       margin: 8px;
@@ -337,7 +348,7 @@
       background: rgba(15, 23, 42, 0.78);
       box-shadow: 0 16px 42px rgba(0, 0, 0, 0.24);
       cursor: grab;
-      transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+      transition: opacity 160ms ease, transform 160ms ease;
     }
 
     .slide-card:active {
@@ -414,26 +425,6 @@
       letter-spacing: -0.035em;
     }
 
-    .slide-card-meta {
-      display: grid;
-      gap: 4px;
-    }
-
-    .slide-card-number {
-      color: #93c5fd;
-      font-size: 0.8rem;
-      font-weight: 900;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-
-    .slide-card-title {
-      color: white;
-      font-size: 1rem;
-      font-weight: 850;
-      line-height: 1.2;
-    }
-
     @media (max-width: 760px) {
       .slide { inset: 12px; }
       .pdf-frame { width: calc(100vw - 28px); max-height: calc(100vh - 104px); }
@@ -441,7 +432,7 @@
       .toolbar-button { padding: 9px 12px; font-size: 0.9rem; }
       .editor-header { display: grid; }
       .editor-actions { justify-content: flex-start; }
-      .slide-card { flex-basis: 150px; min-width: 150px; margin: 6px; padding: 9px; }
+      .slide-card { flex: 0 0 150px; width: 150px; margin: 6px; padding: 9px; }
       .drop-indicator { flex-basis: 14px; min-height: 168px; margin: 6px -7px; }
     }
   </style>
@@ -480,11 +471,9 @@
       <header class="editor-header">
         <div class="editor-title-block">
           <h2>Presentation Editor</h2>
-          <p>Drag and drop the slide cards to change the presentation order. The new order is saved in this browser and is used immediately on the live presentation page.</p>
         </div>
         <div class="editor-actions">
-          <button class="editor-button danger" id="resetOrderButton" type="button">Reset Order</button>
-          <button class="editor-button primary" id="exitEditorButton" type="button">Open Presentation</button>
+          <button id="exitEditorButton" class="editor-link" type="button">Open Presentation</button>
         </div>
       </header>
       <p class="editor-status" id="editorStatus" aria-live="polite"></p>
@@ -525,7 +514,6 @@
     const editorStatus = document.querySelector('#editorStatus');
     const openEditorButton = document.querySelector('#openEditorButton');
     const exitEditorButton = document.querySelector('#exitEditorButton');
-    const resetOrderButton = document.querySelector('#resetOrderButton');
     const defaultSlideOrder = slideDefinitions.map((slide) => slide.id);
     const slideElementsById = new Map();
     let slideOrder = loadSlideOrder();
@@ -634,10 +622,6 @@
               ? `<img src="assets/slides/${definition.file}" alt="${definition.title} thumbnail" loading="lazy" decoding="async" />`
               : '<div class="slide-card-placeholder">Self-assessment slider</div>'}
           </div>
-          <div class="slide-card-meta">
-            <span class="slide-card-number">Slide ${index + 1}</span>
-            <span class="slide-card-title">${definition.title}</span>
-          </div>
         `;
 
         card.addEventListener('dragstart', (event) => {
@@ -699,14 +683,6 @@
       window.location.href = 'https://megarypointe.github.io/grow-presentation/';
     }
 
-    function resetSlideOrder() {
-      slideOrder = [...defaultSlideOrder];
-      persistSlideOrder();
-      applySlideOrder(slideOrder[0]);
-      renderEditorCards();
-      editorStatus.textContent = 'Slide order reset to the original deck order.';
-    }
-
     function updateDeck() {
       slides.forEach((slide, index) => {
         slide.classList.toggle('active', index === currentSlide);
@@ -756,7 +732,6 @@
 
     openEditorButton.addEventListener('click', openEditor);
     exitEditorButton.addEventListener('click', closeEditor);
-    resetOrderButton.addEventListener('click', resetSlideOrder);
 
     const slider = document.querySelector('#discipleshipScore');
     const scoreValue = document.querySelector('#scoreValue');

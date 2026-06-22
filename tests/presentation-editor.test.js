@@ -10,7 +10,7 @@ test('presentation editor page exists with reorder controls', () => {
   assert.match(html, />Presentation Editor</);
   assert.match(html, /id="editorGrid"/);
   assert.match(html, /id="exitEditorButton"/);
-  assert.match(html, /id="resetOrderButton"/);
+  assert.doesNotMatch(html, /id="resetOrderButton"|>Reset Order</);
 });
 
 test('standalone editor opens directly and links back to the live presentation', () => {
@@ -35,6 +35,18 @@ test('editor uses between-slide drop indicators instead of card highlighting', (
   assert.match(html, /function renderDropIndicators\(/);
   assert.match(html, /function setActiveDropIndicator\(/);
   assert.match(html, /function getDropIndexFromPointer\(/);
+});
+
+test('editor cards show only slide thumbnails at a consistent fixed size', () => {
+  assert.doesNotMatch(html, /slide-card-meta|slide-card-number|slide-card-title|Slide \\${index \\+ 1}/);
+  assert.match(html, /width:\s*220px/);
+  assert.match(html, /flex:\s*0 0 220px/);
+  assert.doesNotMatch(html, /flex:\s*1 1 220px|max-width:\s*320px/);
+});
+
+test('open presentation control is discreet', () => {
+  assert.match(html, /id="exitEditorButton"[^>]*class="editor-link"/);
+  assert.doesNotMatch(html, /id="exitEditorButton"[^>]*class="[^"]*primary/);
 });
 
 test('deck navigation uses the reordered slide list', () => {
