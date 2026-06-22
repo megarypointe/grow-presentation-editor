@@ -323,6 +323,73 @@
     .editor-title-block {
       display: grid;
       gap: 8px;
+      position: relative;
+    }
+
+    .editor-title-row {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      position: relative;
+    }
+
+    .add-menu-button {
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(226, 232, 240, 0.18);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      cursor: pointer;
+      font: inherit;
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .add-menu-button:hover,
+    .add-menu-button:focus-visible {
+      background: rgba(96, 165, 250, 0.24);
+      outline: 2px solid rgba(96, 165, 250, 0.45);
+      outline-offset: 2px;
+    }
+
+    .add-menu {
+      position: absolute;
+      z-index: 30;
+      top: calc(100% + 8px);
+      left: 0;
+      min-width: 170px;
+      display: grid;
+      gap: 4px;
+      padding: 8px;
+      border: 1px solid rgba(226, 232, 240, 0.18);
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.96);
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.34);
+    }
+
+    .add-menu[hidden] {
+      display: none;
+    }
+
+    .add-menu-option {
+      border: 0;
+      border-radius: 10px;
+      padding: 9px 11px;
+      background: transparent;
+      color: #e5e7eb;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 750;
+      text-align: left;
+    }
+
+    .add-menu-option:hover,
+    .add-menu-option:focus-visible {
+      background: rgba(96, 165, 250, 0.18);
+      color: white;
+      outline: none;
     }
 
     .editor-title-block h2 {
@@ -366,6 +433,10 @@
       border: 1px solid rgba(226, 232, 240, 0.16);
       border-radius: 18px;
       background: rgba(15, 23, 42, 0.52);
+    }
+
+    .tool-panel[hidden] {
+      display: none;
     }
 
     .editor-tool h3 {
@@ -563,7 +634,14 @@
     <div class="editor-shell">
       <header class="editor-header">
         <div class="editor-title-block">
-          <h2>Presentation Editor</h2>
+          <div class="editor-title-row">
+            <h2>Presentation Editor</h2>
+            <button id="addMenuButton" class="add-menu-button" type="button" aria-label="Add slide" aria-expanded="false" aria-controls="addMenu">+</button>
+            <div class="add-menu" id="addMenu" hidden>
+              <button class="add-menu-option" type="button" data-tool="slider">Add Slider</button>
+              <button class="add-menu-option" type="button" data-tool="media">Add Slide</button>
+            </div>
+          </div>
         </div>
         <div class="editor-actions">
           <button id="exitEditorButton" class="editor-link" type="button">Open Presentation</button>
@@ -571,7 +649,7 @@
       </header>
       <p class="editor-status" id="editorStatus" aria-live="polite"></p>
       <div class="editor-tools" aria-label="Add slides">
-        <form class="editor-tool" id="addSliderForm">
+        <form class="editor-tool tool-panel" id="addSliderForm" hidden>
           <h3>Add slider question</h3>
           <input id="sliderQuestionInput" type="text" placeholder="Question for the slide" required />
           <div class="tool-row">
@@ -580,7 +658,7 @@
             <button class="tool-button" type="submit">Add Slider</button>
           </div>
         </form>
-        <form class="editor-tool" id="addMediaForm">
+        <form class="editor-tool tool-panel" id="addMediaForm" hidden>
           <h3>Add media slide</h3>
           <div class="tool-row">
             <select id="mediaTypeSelect" aria-label="Media slide type">
@@ -634,6 +712,9 @@
     const editorStatus = document.querySelector('#editorStatus');
     const openEditorButton = document.querySelector('#openEditorButton');
     const exitEditorButton = document.querySelector('#exitEditorButton');
+    const addMenuButton = document.querySelector('#addMenuButton');
+    const addMenu = document.querySelector('#addMenu');
+    const addMenuOptions = document.querySelectorAll('[data-tool]');
     const addSliderForm = document.querySelector('#addSliderForm');
     const sliderQuestionInput = document.querySelector('#sliderQuestionInput');
     const sliderMinInput = document.querySelector('#sliderMinInput');
@@ -922,6 +1003,20 @@
       renderEditorCards();
     }
 
+    function toggleAddMenu(forceOpen) {
+      const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : addMenu.hidden;
+      addMenu.hidden = !shouldOpen;
+      addMenuButton.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    }
+
+    function showToolPanel(tool) {
+      addSliderForm.hidden = tool !== 'slider';
+      addMediaForm.hidden = tool !== 'media';
+      toggleAddMenu(false);
+      const activeForm = tool === 'slider' ? addSliderForm : addMediaForm;
+      activeForm.querySelector('input, select')?.focus();
+    }
+
     function openEditor() {
       document.body.classList.add('editor-open');
       editor.setAttribute('aria-hidden', 'false');
@@ -984,6 +1079,15 @@
 
     openEditorButton.addEventListener('click', openEditor);
     exitEditorButton.addEventListener('click', closeEditor);
+    addMenuButton?.addEventListener('click', () => toggleAddMenu());
+    addMenuOptions.forEach((option) => {
+      option.addEventListener('click', () => showToolPanel(option.dataset.tool));
+    });
+    document.addEventListener('click', (event) => {
+      if (!addMenu.hidden && !event.target.closest('.editor-title-row')) {
+        toggleAddMenu(false);
+      }
+    });
     addSliderForm?.addEventListener('submit', (event) => {
       event.preventDefault();
       createSliderSlide(

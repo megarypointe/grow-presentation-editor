@@ -51,17 +51,28 @@ test('open presentation control is discreet', () => {
   assert.doesNotMatch(html, /id="exitEditorButton"[^>]*class="[^"]*primary/);
 });
 
-test('editor can add slider-question slides', () => {
+test('editor has a plus menu next to the title for adding slides', () => {
+  assert.match(html, /id="addMenuButton"/);
+  assert.match(html, /aria-label="Add slide"/);
+  assert.match(html, /id="addMenu"/);
+  assert.match(html, /data-tool="slider"[\s\S]*Add Slider/);
+  assert.match(html, /data-tool="media"[\s\S]*Add Slide/);
+  assert.match(html, /function toggleAddMenu\(/);
+  assert.match(html, /function showToolPanel\(/);
+});
+
+test('editor can add slider-question slides from a hidden panel', () => {
   assert.match(html, /id="addSliderForm"/);
   assert.match(html, /id="sliderQuestionInput"/);
   assert.match(html, /id="sliderMinInput"/);
   assert.match(html, /id="sliderMaxInput"/);
+  assert.match(html, /class="editor-tool tool-panel"/);
   assert.match(html, /CUSTOM_SLIDES_STORAGE_KEY/);
   assert.match(html, /function createSliderSlide\(/);
   assert.match(html, /kind:\s*'custom-slider'/);
 });
 
-test('editor can add image, video, and PDF slides', () => {
+test('editor can add image, video, and PDF slides from a hidden panel', () => {
   assert.match(html, /id="addMediaForm"/);
   assert.match(html, /id="mediaTypeSelect"/);
   assert.match(html, /id="mediaFileInput"/);
