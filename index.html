@@ -454,7 +454,8 @@
     .tool-row input,
     .tool-row select,
     .editor-tool input[type="text"],
-    .editor-tool input[type="file"] {
+    .editor-tool input[type="file"],
+    .editor-tool textarea {
       min-width: 0;
       width: 100%;
       border: 1px solid rgba(226, 232, 240, 0.18);
@@ -465,7 +466,12 @@
       font: inherit;
     }
 
-    .editor-tool input::placeholder {
+    .editor-tool textarea {
+      resize: vertical;
+    }
+
+    .editor-tool input::placeholder,
+    .editor-tool textarea::placeholder {
       color: #94a3b8;
     }
 
@@ -505,6 +511,7 @@
       flex: 0 0 220px;
       width: 220px;
       display: grid;
+      position: relative;
       margin: 8px;
       padding: 12px;
       border: 1px solid rgba(226, 232, 240, 0.2);
@@ -575,7 +582,8 @@
       display: block;
     }
 
-    .slide-card-placeholder {
+    .slide-card-placeholder,
+    .slide-card-question {
       width: 100%;
       height: 100%;
       display: grid;
@@ -584,9 +592,88 @@
       background: linear-gradient(135deg, #eff6ff, #dbeafe);
       color: var(--blue-dark);
       text-align: center;
-      font-size: 1.25rem;
       font-weight: 900;
       letter-spacing: -0.035em;
+    }
+
+    .slide-card-placeholder {
+      font-size: 1.25rem;
+    }
+
+    .slide-card-question {
+      font-size: clamp(0.74rem, 1.4vw, 0.95rem);
+      line-height: 1.16;
+      overflow-wrap: anywhere;
+    }
+
+    .card-menu-button {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      width: 28px;
+      height: 28px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.62);
+      color: white;
+      cursor: pointer;
+      font: inherit;
+      font-size: 1.1rem;
+      font-weight: 900;
+      line-height: 1;
+      opacity: 0.78;
+    }
+
+    .card-menu-button:hover,
+    .card-menu-button:focus-visible {
+      opacity: 1;
+      background: rgba(15, 23, 42, 0.86);
+      outline: 2px solid rgba(96, 165, 250, 0.55);
+      outline-offset: 2px;
+    }
+
+    .card-menu {
+      position: absolute;
+      z-index: 35;
+      top: 47px;
+      right: 12px;
+      min-width: 112px;
+      display: grid;
+      gap: 4px;
+      padding: 6px;
+      border: 1px solid rgba(226, 232, 240, 0.18);
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.98);
+      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.34);
+    }
+
+    .card-menu[hidden] {
+      display: none;
+    }
+
+    .card-menu button {
+      border: 0;
+      border-radius: 9px;
+      padding: 8px 10px;
+      background: transparent;
+      color: #e5e7eb;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 750;
+      text-align: left;
+    }
+
+    .card-menu button:hover,
+    .card-menu button:focus-visible {
+      background: rgba(96, 165, 250, 0.18);
+      color: white;
+      outline: none;
+    }
+
+    .card-menu button[data-card-action="delete"]:hover,
+    .card-menu button[data-card-action="delete"]:focus-visible {
+      background: rgba(248, 113, 113, 0.2);
+      color: #fecaca;
     }
 
     @media (max-width: 760px) {
@@ -657,6 +744,7 @@
             <input id="sliderMaxInput" type="number" value="5" min="1" aria-label="Maximum slider value" />
             <button class="tool-button" type="submit">Add Slider</button>
           </div>
+          <textarea id="sliderLabelsInput" rows="4" placeholder="Optional number descriptions, one per line. Example: 1: Needs work"></textarea>
         </form>
         <form class="editor-tool tool-panel" id="addMediaForm" hidden>
           <h3>Add media slide</h3>
@@ -719,6 +807,7 @@
     const sliderQuestionInput = document.querySelector('#sliderQuestionInput');
     const sliderMinInput = document.querySelector('#sliderMinInput');
     const sliderMaxInput = document.querySelector('#sliderMaxInput');
+    const sliderLabelsInput = document.querySelector('#sliderLabelsInput');
     const addMediaForm = document.querySelector('#addMediaForm');
     const mediaTypeSelect = document.querySelector('#mediaTypeSelect');
     const mediaFileInput = document.querySelector('#mediaFileInput');
@@ -748,6 +837,7 @@
       if (definition.kind === 'custom-slider') {
         const scoreId = `score-${definition.id}`;
         const inputId = `input-${definition.id}`;
+        const helperId = `helper-${definition.id}`;
         section.innerHTML = `
           <main>
             <div class="eyebrow">Self-assessment</div>
@@ -761,11 +851,16 @@
               <input id="${inputId}" type="range" min="${definition.min}" max="${definition.max}" step="1" value="${definition.value}" />
               <div class="scale" aria-hidden="true"><span>${definition.min}</span><span>${definition.max}</span></div>
             </div>
+            <p class="helper-text" id="${helperId}">${definition.labels?.[definition.value] || ''}</p>
           </main>
         `;
         const input = section.querySelector(`#${inputId}`);
         const score = section.querySelector(`#${scoreId}`);
-        input.addEventListener('input', () => { score.textContent = input.value; });
+        const helper = section.querySelector(`#${helperId}`);
+        input.addEventListener('input', () => {
+          score.textContent = input.value;
+          helper.textContent = definition.labels?.[input.value] || '';
+        });
       }
 
       if (definition.kind === 'media-image') {
@@ -830,7 +925,19 @@
       renderEditorCards();
     }
 
-    function createSliderSlide(question, min, max) {
+    function parseSliderLabels(text) {
+      return text.split('\n').reduce((labels, line) => {
+        const match = line.match(/^\s*(\d+)\s*[:\-]\s*(.+?)\s*$/);
+        if (match) labels[match[1]] = match[2];
+        return labels;
+      }, {});
+    }
+
+    function formatSliderLabels(labels = {}) {
+      return Object.entries(labels).map(([value, label]) => `${value}: ${label}`).join('\n');
+    }
+
+    function createSliderSlide(question, min, max, labels = {}) {
       const safeMin = Number.isFinite(min) ? min : 1;
       const safeMax = Number.isFinite(max) && max > safeMin ? max : safeMin + 4;
       const definition = {
@@ -840,9 +947,28 @@
         min: safeMin,
         max: safeMax,
         value: Math.round((safeMin + safeMax) / 2),
+        labels,
         kind: 'custom-slider'
       };
       registerCustomSlide(definition);
+    }
+
+    function updateSliderSlide(slideId, question, min, max, labels = {}) {
+      const definition = customSlides.find((slide) => slide.id === slideId);
+      if (!definition) return;
+      definition.title = question;
+      definition.question = question;
+      definition.min = Number.isFinite(min) ? min : definition.min;
+      definition.max = Number.isFinite(max) && max > definition.min ? max : definition.max;
+      definition.value = Math.max(definition.min, Math.min(definition.value, definition.max));
+      definition.labels = labels;
+      saveCustomSlides();
+      const oldElement = slideElementsById.get(slideId);
+      const newElement = buildSlideElement(definition, slideDefinitions.findIndex((slide) => slide.id === slideId));
+      oldElement?.replaceWith(newElement);
+      slideElementsById.set(slideId, newElement);
+      renderEditorCards();
+      applySlideOrder(slideId);
     }
 
     function createMediaSlide(mediaType, file) {
@@ -943,6 +1069,8 @@
         card.draggable = true;
         card.setAttribute('draggable', 'true');
         card.dataset.slideId = slideId;
+        const canEdit = definition.kind === 'custom-slider';
+        const canDelete = definition.id !== 'strategy-slider';
         card.innerHTML = `
           <div class="slide-card-preview">
             ${definition.kind === 'image'
@@ -953,8 +1081,17 @@
                   ? '<div class="slide-card-placeholder">Video</div>'
                   : definition.kind === 'media-pdf'
                     ? '<div class="slide-card-placeholder">PDF</div>'
-                    : '<div class="slide-card-placeholder">Slider</div>'}
+                    : definition.kind === 'custom-slider'
+                      ? `<div class="slide-card-question">${definition.question}</div>`
+                      : '<div class="slide-card-question">How strong do you feel your Discipleship strategy is?</div>'}
           </div>
+          ${(canEdit || canDelete) ? `
+            <button class="card-menu-button" type="button" aria-label="Slide options" aria-expanded="false">⋯</button>
+            <div class="card-menu" hidden>
+              ${canEdit ? '<button type="button" data-card-action="edit">Edit</button>' : ''}
+              ${canDelete ? '<button type="button" data-card-action="delete">Delete</button>' : ''}
+            </div>
+          ` : ''}
         `;
 
         card.addEventListener('dragstart', (event) => {
@@ -984,9 +1121,57 @@
           }
         });
 
+        card.querySelector('.card-menu-button')?.addEventListener('click', (event) => {
+          event.stopPropagation();
+          toggleCardMenu(card);
+        });
+        card.querySelector('[data-card-action="delete"]')?.addEventListener('click', () => deleteSlide(slideId));
+        card.querySelector('[data-card-action="edit"]')?.addEventListener('click', () => editSlider(slideId));
+
         editorGrid.appendChild(card);
       });
       editorGrid.appendChild(renderDropIndicators(slideOrder.length));
+    }
+
+    function toggleCardMenu(card, forceOpen) {
+      const menu = card.querySelector('.card-menu');
+      const button = card.querySelector('.card-menu-button');
+      if (!menu || !button) return;
+      editorGrid.querySelectorAll('.card-menu').forEach((otherMenu) => {
+        if (otherMenu !== menu) {
+          otherMenu.hidden = true;
+          otherMenu.previousElementSibling?.setAttribute('aria-expanded', 'false');
+        }
+      });
+      const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : menu.hidden;
+      menu.hidden = !shouldOpen;
+      button.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    }
+
+    function deleteSlide(slideId) {
+      slideOrder = slideOrder.filter((id) => id !== slideId);
+      const customIndex = customSlides.findIndex((slide) => slide.id === slideId);
+      if (customIndex >= 0) {
+        customSlides.splice(customIndex, 1);
+        saveCustomSlides();
+        slideDefinitions = [...baseSlideDefinitions, ...customSlides];
+        defaultSlideOrder = slideDefinitions.map((slide) => slide.id);
+      }
+      persistSlideOrder();
+      renderEditorCards();
+      applySlideOrder(slideOrder[Math.min(currentSlide, slideOrder.length - 1)]);
+    }
+
+    function editSlider(slideId) {
+      const definition = customSlides.find((slide) => slide.id === slideId);
+      if (!definition) return;
+      showToolPanel('slider');
+      addSliderForm.dataset.editingSlideId = slideId;
+      addSliderForm.querySelector('.tool-button').textContent = 'Save Slider';
+      sliderQuestionInput.value = definition.question;
+      sliderMinInput.value = definition.min;
+      sliderMaxInput.value = definition.max;
+      sliderLabelsInput.value = formatSliderLabels(definition.labels);
     }
 
     function moveSlide(slideId, targetIndex) {
@@ -1013,6 +1198,9 @@
       addSliderForm.hidden = tool !== 'slider';
       addMediaForm.hidden = tool !== 'media';
       toggleAddMenu(false);
+      if (tool === 'slider' && !addSliderForm.dataset.editingSlideId) {
+        addSliderForm.querySelector('.tool-button').textContent = 'Add Slider';
+      }
       const activeForm = tool === 'slider' ? addSliderForm : addMediaForm;
       activeForm.querySelector('input, select')?.focus();
     }
@@ -1086,14 +1274,33 @@
       if (!addMenu.hidden && !event.target.closest('.editor-title-row')) {
         toggleAddMenu(false);
       }
+      if (!event.target.closest('.slide-card')) {
+        editorGrid.querySelectorAll('.card-menu').forEach((menu) => { menu.hidden = true; });
+        editorGrid.querySelectorAll('.card-menu-button').forEach((button) => button.setAttribute('aria-expanded', 'false'));
+      }
     });
     addSliderForm?.addEventListener('submit', (event) => {
       event.preventDefault();
-      createSliderSlide(
-        sliderQuestionInput.value.trim(),
-        Number(sliderMinInput.value),
-        Number(sliderMaxInput.value)
-      );
+      const labels = parseSliderLabels(sliderLabelsInput.value);
+      const editingSlideId = addSliderForm.dataset.editingSlideId;
+      if (editingSlideId) {
+        updateSliderSlide(
+          editingSlideId,
+          sliderQuestionInput.value.trim(),
+          Number(sliderMinInput.value),
+          Number(sliderMaxInput.value),
+          labels
+        );
+        delete addSliderForm.dataset.editingSlideId;
+        addSliderForm.querySelector('.tool-button').textContent = 'Add Slider';
+      } else {
+        createSliderSlide(
+          sliderQuestionInput.value.trim(),
+          Number(sliderMinInput.value),
+          Number(sliderMaxInput.value),
+          labels
+        );
+      }
       addSliderForm.reset();
       sliderMinInput.value = '1';
       sliderMaxInput.value = '5';
