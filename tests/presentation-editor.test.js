@@ -51,6 +51,27 @@ test('open presentation control is discreet', () => {
   assert.doesNotMatch(html, /id="exitEditorButton"[^>]*class="[^"]*primary/);
 });
 
+test('editor can add slider-question slides', () => {
+  assert.match(html, /id="addSliderForm"/);
+  assert.match(html, /id="sliderQuestionInput"/);
+  assert.match(html, /id="sliderMinInput"/);
+  assert.match(html, /id="sliderMaxInput"/);
+  assert.match(html, /CUSTOM_SLIDES_STORAGE_KEY/);
+  assert.match(html, /function createSliderSlide\(/);
+  assert.match(html, /kind:\s*'custom-slider'/);
+});
+
+test('editor can add image, video, and PDF slides', () => {
+  assert.match(html, /id="addMediaForm"/);
+  assert.match(html, /id="mediaTypeSelect"/);
+  assert.match(html, /id="mediaFileInput"/);
+  assert.match(html, /accept="image\/\*,video\/\*,application\/pdf"/);
+  assert.match(html, /function createMediaSlide\(/);
+  assert.match(html, /kind:\s*`media-\$\{mediaType\}`/);
+  assert.match(html, /<video[\s\S]*controls/);
+  assert.match(html, /<iframe[\s\S]*application\/pdf/);
+});
+
 test('deck navigation uses the reordered slide list', () => {
   assert.match(html, /let slides = \[\]/);
   assert.match(html, /function applySlideOrder\(/);

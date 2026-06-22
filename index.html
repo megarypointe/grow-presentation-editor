@@ -216,6 +216,29 @@
       background: #111827;
     }
 
+    .media-frame {
+      width: min(100%, calc((100vh - 120px) * 16 / 9));
+      max-height: calc(100vh - 92px);
+      aspect-ratio: 16 / 9;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #111827;
+      box-shadow: 0 26px 80px rgba(0, 0, 0, 0.42);
+    }
+
+    .media-frame img,
+    .media-frame video,
+    .media-frame iframe {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border: 0;
+      object-fit: contain;
+      background: #111827;
+    }
+
     .presentation-toolbar {
       position: fixed;
       z-index: 20;
@@ -327,6 +350,77 @@
       margin-bottom: 18px;
       color: #bfdbfe;
       font-weight: 750;
+    }
+
+    .editor-tools {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin: 0 0 18px;
+    }
+
+    .editor-tool {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid rgba(226, 232, 240, 0.16);
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.52);
+    }
+
+    .editor-tool h3 {
+      color: white;
+      font-size: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .tool-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .tool-row input,
+    .tool-row select,
+    .editor-tool input[type="text"],
+    .editor-tool input[type="file"] {
+      min-width: 0;
+      width: 100%;
+      border: 1px solid rgba(226, 232, 240, 0.18);
+      border-radius: 12px;
+      padding: 9px 10px;
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      font: inherit;
+    }
+
+    .editor-tool input::placeholder {
+      color: #94a3b8;
+    }
+
+    .tool-row input[type="number"] {
+      width: 74px;
+      flex: 0 0 74px;
+    }
+
+    .tool-button {
+      border: 0;
+      border-radius: 999px;
+      padding: 9px 13px;
+      background: rgba(96, 165, 250, 0.22);
+      color: #dbeafe;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .tool-button:hover,
+    .tool-button:focus-visible {
+      background: rgba(96, 165, 250, 0.34);
+      color: white;
+      outline: 2px solid rgba(96, 165, 250, 0.45);
+      outline-offset: 2px;
     }
 
     .editor-grid {
@@ -476,12 +570,36 @@
         </div>
       </header>
       <p class="editor-status" id="editorStatus" aria-live="polite"></p>
+      <div class="editor-tools" aria-label="Add slides">
+        <form class="editor-tool" id="addSliderForm">
+          <h3>Add slider question</h3>
+          <input id="sliderQuestionInput" type="text" placeholder="Question for the slide" required />
+          <div class="tool-row">
+            <input id="sliderMinInput" type="number" value="1" min="0" aria-label="Minimum slider value" />
+            <input id="sliderMaxInput" type="number" value="5" min="1" aria-label="Maximum slider value" />
+            <button class="tool-button" type="submit">Add Slider</button>
+          </div>
+        </form>
+        <form class="editor-tool" id="addMediaForm">
+          <h3>Add media slide</h3>
+          <div class="tool-row">
+            <select id="mediaTypeSelect" aria-label="Media slide type">
+              <option value="image">Image</option>
+              <option value="video">Video</option>
+              <option value="pdf">PDF</option>
+            </select>
+            <button class="tool-button" type="submit">Add Slide</button>
+          </div>
+          <input id="mediaFileInput" type="file" accept="image/*,video/*,application/pdf" required />
+        </form>
+      </div>
       <div class="editor-grid" id="editorGrid" aria-label="Slides in presentation order"></div>
     </div>
   </section>
 
   <script>
     const ORDER_STORAGE_KEY = 'discipleshipPresentationSlideOrder';
+    const CUSTOM_SLIDES_STORAGE_KEY = 'discipleshipPresentationCustomSlides';
 
     const pdfSlides = [
       "page-003.webp", "page-004.webp", "page-005.webp",
@@ -493,7 +611,7 @@
       "page-031.webp", "page-032.webp", "page-033.webp", "page-034.webp"
     ];
 
-    const slideDefinitions = [
+    const baseSlideDefinitions = [
       {
         id: 'strategy-slider',
         title: 'Discipleship Strategy Slider',
@@ -507,13 +625,23 @@
       }))
     ];
 
+    let customSlides = loadCustomSlides();
+    let slideDefinitions = [...baseSlideDefinitions, ...customSlides];
+
     const deck = document.querySelector('#deck');
     const editor = document.querySelector('#presentationEditor');
     const editorGrid = document.querySelector('#editorGrid');
     const editorStatus = document.querySelector('#editorStatus');
     const openEditorButton = document.querySelector('#openEditorButton');
     const exitEditorButton = document.querySelector('#exitEditorButton');
-    const defaultSlideOrder = slideDefinitions.map((slide) => slide.id);
+    const addSliderForm = document.querySelector('#addSliderForm');
+    const sliderQuestionInput = document.querySelector('#sliderQuestionInput');
+    const sliderMinInput = document.querySelector('#sliderMinInput');
+    const sliderMaxInput = document.querySelector('#sliderMaxInput');
+    const addMediaForm = document.querySelector('#addMediaForm');
+    const mediaTypeSelect = document.querySelector('#mediaTypeSelect');
+    const mediaFileInput = document.querySelector('#mediaFileInput');
+    let defaultSlideOrder = slideDefinitions.map((slide) => slide.id);
     const slideElementsById = new Map();
     let slideOrder = loadSlideOrder();
     let slides = [];
@@ -522,19 +650,138 @@
 
     slideElementsById.set('strategy-slider', document.querySelector('[data-slide-id="strategy-slider"]'));
 
-    pdfSlides.forEach((file, index) => {
+    function buildSlideElement(definition, index) {
       const section = document.createElement('section');
-      section.className = 'slide pdf-slide';
-      section.dataset.slideId = `pdf-${index + 1}`;
-      section.dataset.title = `PDF slide ${index + 1}`;
-      section.innerHTML = `
-        <figure class="pdf-frame">
-          <img src="assets/slides/${file}" alt="Webinar slide ${index + 1}" loading="lazy" decoding="async" />
-        </figure>
-      `;
+      section.className = `slide ${definition.kind === 'custom-slider' ? 'slider-slide' : 'pdf-slide'}`;
+      section.dataset.slideId = definition.id;
+      section.dataset.title = definition.title || `Slide ${index + 1}`;
+
+      if (definition.kind === 'image') {
+        section.innerHTML = `
+          <figure class="pdf-frame">
+            <img src="assets/slides/${definition.file}" alt="Webinar slide ${index + 1}" loading="lazy" decoding="async" />
+          </figure>
+        `;
+      }
+
+      if (definition.kind === 'custom-slider') {
+        const scoreId = `score-${definition.id}`;
+        const inputId = `input-${definition.id}`;
+        section.innerHTML = `
+          <main>
+            <div class="eyebrow">Self-assessment</div>
+            <h1>${definition.question}</h1>
+            <section class="score-card" aria-live="polite">
+              <span class="score-label">Your score</span>
+              <span id="${scoreId}">${definition.value}</span>
+            </section>
+            <div class="slider-wrap">
+              <label class="sr-only" for="${inputId}">${definition.question}</label>
+              <input id="${inputId}" type="range" min="${definition.min}" max="${definition.max}" step="1" value="${definition.value}" />
+              <div class="scale" aria-hidden="true"><span>${definition.min}</span><span>${definition.max}</span></div>
+            </div>
+          </main>
+        `;
+        const input = section.querySelector(`#${inputId}`);
+        const score = section.querySelector(`#${scoreId}`);
+        input.addEventListener('input', () => { score.textContent = input.value; });
+      }
+
+      if (definition.kind === 'media-image') {
+        section.innerHTML = `
+          <figure class="media-frame">
+            <img src="${definition.dataUrl}" alt="${definition.title}" loading="lazy" decoding="async" />
+          </figure>
+        `;
+      }
+
+      if (definition.kind === 'media-video') {
+        section.innerHTML = `
+          <figure class="media-frame">
+            <video src="${definition.dataUrl}" controls playsinline></video>
+          </figure>
+        `;
+      }
+
+      if (definition.kind === 'media-pdf') {
+        section.innerHTML = `
+          <figure class="media-frame">
+            <iframe src="${definition.dataUrl}" title="${definition.title} application/pdf"></iframe>
+          </figure>
+        `;
+      }
+
+      return section;
+    }
+
+    slideDefinitions.forEach((definition, index) => {
+      if (definition.id === 'strategy-slider') return;
+      const section = buildSlideElement(definition, index);
       deck.appendChild(section);
       slideElementsById.set(section.dataset.slideId, section);
     });
+
+    function loadCustomSlides() {
+      try {
+        const savedSlides = JSON.parse(localStorage.getItem(CUSTOM_SLIDES_STORAGE_KEY) || '[]');
+        if (!Array.isArray(savedSlides)) return [];
+        return savedSlides.filter((slide) => slide && slide.id && [
+          'custom-slider', 'media-image', 'media-video', 'media-pdf'
+        ].includes(slide.kind));
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveCustomSlides() {
+      localStorage.setItem(CUSTOM_SLIDES_STORAGE_KEY, JSON.stringify(customSlides));
+    }
+
+    function registerCustomSlide(definition) {
+      customSlides.push(definition);
+      slideDefinitions = [...baseSlideDefinitions, ...customSlides];
+      defaultSlideOrder = slideDefinitions.map((slide) => slide.id);
+      saveCustomSlides();
+      slideElementsById.set(definition.id, buildSlideElement(definition, slideDefinitions.length - 1));
+      slideOrder.push(definition.id);
+      persistSlideOrder();
+      applySlideOrder(definition.id);
+      renderEditorCards();
+    }
+
+    function createSliderSlide(question, min, max) {
+      const safeMin = Number.isFinite(min) ? min : 1;
+      const safeMax = Number.isFinite(max) && max > safeMin ? max : safeMin + 4;
+      const definition = {
+        id: `custom-slider-${Date.now()}`,
+        title: question,
+        question,
+        min: safeMin,
+        max: safeMax,
+        value: Math.round((safeMin + safeMax) / 2),
+        kind: 'custom-slider'
+      };
+      registerCustomSlide(definition);
+    }
+
+    function createMediaSlide(mediaType, file) {
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        const definition = {
+          id: `media-${mediaType}-${Date.now()}`,
+          title: file.name || `${mediaType} slide`,
+          kind: `media-${mediaType}`,
+          mimeType: file.type,
+          dataUrl: reader.result
+        };
+        try {
+          registerCustomSlide(definition);
+        } catch (error) {
+          editorStatus.textContent = 'That file is too large to save in this browser. Try a smaller file.';
+        }
+      });
+      reader.readAsDataURL(file);
+    }
 
     function loadSlideOrder() {
       try {
@@ -619,7 +866,13 @@
           <div class="slide-card-preview">
             ${definition.kind === 'image'
               ? `<img src="assets/slides/${definition.file}" alt="${definition.title} thumbnail" loading="lazy" decoding="async" />`
-              : '<div class="slide-card-placeholder">Self-assessment slider</div>'}
+              : definition.kind === 'media-image'
+                ? `<img src="${definition.dataUrl}" alt="${definition.title} thumbnail" loading="lazy" decoding="async" />`
+                : definition.kind === 'media-video'
+                  ? '<div class="slide-card-placeholder">Video</div>'
+                  : definition.kind === 'media-pdf'
+                    ? '<div class="slide-card-placeholder">PDF</div>'
+                    : '<div class="slide-card-placeholder">Slider</div>'}
           </div>
         `;
 
@@ -731,6 +984,24 @@
 
     openEditorButton.addEventListener('click', openEditor);
     exitEditorButton.addEventListener('click', closeEditor);
+    addSliderForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      createSliderSlide(
+        sliderQuestionInput.value.trim(),
+        Number(sliderMinInput.value),
+        Number(sliderMaxInput.value)
+      );
+      addSliderForm.reset();
+      sliderMinInput.value = '1';
+      sliderMaxInput.value = '5';
+    });
+    addMediaForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const file = mediaFileInput.files?.[0];
+      if (!file) return;
+      createMediaSlide(mediaTypeSelect.value, file);
+      addMediaForm.reset();
+    });
 
     const slider = document.querySelector('#discipleshipScore');
     const scoreValue = document.querySelector('#scoreValue');
