@@ -119,8 +119,7 @@
       text-transform: uppercase;
     }
 
-    .score-value,
-    #scoreValue {
+    .score-value {
       font-size: 4.4rem;
       line-height: 1;
       font-weight: 850;
@@ -694,29 +693,7 @@
     <button class="toolbar-button" id="openEditorButton" type="button" hidden>Presentation Editor</button>
   </div>
 
-  <div class="deck" id="deck" aria-live="polite">
-    <section class="slide slider-slide active" data-slide-id="strategy-slider" data-title="Discipleship Strategy Slider">
-      <main>
-        <div class="eyebrow">Self-assessment</div>
-        <h1>How strong do you feel your Discipleship strategy is?</h1>
-
-        <section class="score-card" aria-live="polite">
-          <span class="score-label">Your score</span>
-          <span id="scoreValue" class="score-value">3</span>
-        </section>
-
-        <div class="slider-wrap">
-          <label class="sr-only" for="discipleshipScore">Discipleship strategy strength from 1 to 5</label>
-          <input id="discipleshipScore" type="range" min="1" max="5" step="1" value="3" />
-          <div class="scale" aria-hidden="true">
-            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
-          </div>
-        </div>
-
-        <p class="helper-text" id="helperText">Move the slider to rate your current strategy.</p>
-      </main>
-    </section>
-  </div>
+  <div class="deck" id="deck" aria-live="polite"></div>
 
   <section class="presentation-editor" id="presentationEditor" aria-label="Presentation Editor" aria-hidden="false">
     <div class="editor-shell">
@@ -760,65 +737,6 @@
   <script>
     const ORDER_STORAGE_KEY = 'discipleshipPresentationSlideOrder';
     const CUSTOM_SLIDES_STORAGE_KEY = 'discipleshipPresentationCustomSlides';
-    const BASE_SLIDER_STORAGE_KEY = 'discipleshipPresentationBaseSlider';
-
-
-    function getDefaultBaseSliderDefinition() {
-      return {
-        question: 'How strong do you feel your Discipleship strategy is?',
-        min: 1,
-        max: 5,
-        value: 3,
-        labels: {
-          1: 'Needs significant attention.',
-          2: 'Some pieces are present, but gaps remain.',
-          3: 'Moderately strong with room to grow.',
-          4: 'Strong and mostly intentional.',
-          5: 'Very strong, clear, and repeatable.'
-        }
-      };
-    }
-
-    function loadBaseSliderDefinition() {
-      const fallback = getDefaultBaseSliderDefinition();
-      try {
-        const saved = JSON.parse(localStorage.getItem(BASE_SLIDER_STORAGE_KEY) || 'null');
-        if (!saved || typeof saved !== 'object') return fallback;
-        const min = Number.isFinite(Number(saved.min)) ? Number(saved.min) : fallback.min;
-        const max = Number.isFinite(Number(saved.max)) && Number(saved.max) > min ? Number(saved.max) : fallback.max;
-        const value = Number.isFinite(Number(saved.value)) ? Math.max(min, Math.min(Number(saved.value), max)) : fallback.value;
-        return {
-          question: String(saved.question || fallback.question),
-          min,
-          max,
-          value,
-          labels: saved.labels && typeof saved.labels === 'object' ? saved.labels : fallback.labels
-        };
-      } catch (error) {
-        return fallback;
-      }
-    }
-
-    function saveBaseSliderDefinition(definition) {
-      if (definition.id !== 'strategy-slider') return;
-      localStorage.setItem(BASE_SLIDER_STORAGE_KEY, JSON.stringify({
-        question: definition.question,
-        min: definition.min,
-        max: definition.max,
-        value: definition.value,
-        labels: definition.labels || {}
-      }));
-    }
-
-    function syncBaseSliderElement() {
-      const definition = slideDefinitions.find((slide) => slide.id === 'strategy-slider');
-      const oldElement = slideElementsById.get('strategy-slider');
-      if (!definition || !oldElement) return;
-      const newElement = buildSlideElement(definition, 0);
-      oldElement.replaceWith(newElement);
-      slideElementsById.set('strategy-slider', newElement);
-    }
-
     const pdfSlides = [
       "page-003.webp", "page-004.webp", "page-005.webp",
       "page-006.webp", "page-007.webp", "page-008.webp", "page-009.webp", "page-010.webp",
@@ -830,12 +748,6 @@
     ];
 
     const baseSlideDefinitions = [
-      {
-        id: 'strategy-slider',
-        title: 'Discipleship Strategy Slider',
-        ...loadBaseSliderDefinition(),
-        kind: 'custom-slider'
-      },
       ...pdfSlides.map((file, index) => ({
         id: `pdf-${index + 1}`,
         title: `PDF slide ${index + 1}`,
@@ -870,8 +782,6 @@
     let currentSlide = 0;
     let draggedSlideId = null;
 
-    slideElementsById.set('strategy-slider', document.querySelector('[data-slide-id="strategy-slider"]'));
-    syncBaseSliderElement();
 
     function buildSlideElement(definition, index) {
       const section = document.createElement('section');
@@ -944,7 +854,6 @@
     }
 
     slideDefinitions.forEach((definition, index) => {
-      if (definition.id === 'strategy-slider') return;
       const section = buildSlideElement(definition, index);
       deck.appendChild(section);
       slideElementsById.set(section.dataset.slideId, section);
@@ -1039,13 +948,6 @@
       definition.max = Number.isFinite(max) && max > definition.min ? max : definition.max;
       definition.value = Math.max(definition.min, Math.min(definition.value, definition.max));
       definition.labels = labels;
-      saveBaseSliderDefinition(definition);
-      if (slideId === 'strategy-slider') {
-        syncBaseSliderElement();
-        renderEditorCards();
-        applySlideOrder(slideId);
-        return;
-      }
       if (customSlides.some((slide) => slide.id === slideId)) {
         saveCustomSlides();
       }
@@ -1164,7 +1066,7 @@
         card.setAttribute('draggable', 'true');
         card.dataset.slideId = slideId;
         const canEdit = definition.kind === 'custom-slider';
-        const canDelete = definition.id !== 'strategy-slider';
+        const canDelete = true;
         card.innerHTML = `
           <div class="slide-card-preview">
             ${definition.kind === 'image'
@@ -1179,7 +1081,7 @@
                       ? '<div class="slide-card-placeholder">File</div>'
                       : definition.kind === 'custom-slider'
                       ? `<div class="slide-card-question">${definition.question}</div>`
-                      : '<div class="slide-card-question">How strong do you feel your Discipleship strategy is?</div>'}
+                      : '<div class="slide-card-placeholder">Slide</div>'}
           </div>
           ${(canEdit || canDelete) ? `
             <button class="card-menu-button" type="button" aria-label="Slide options" aria-expanded="false">⋯</button>
@@ -1416,27 +1318,6 @@
       addMediaForm.reset();
     });
 
-    const slider = document.querySelector('#discipleshipScore');
-    const scoreValue = document.querySelector('#scoreValue');
-    const helperText = document.querySelector('#helperText');
-
-    const labels = {
-      1: 'Needs significant attention.',
-      2: 'Some pieces are present, but gaps remain.',
-      3: 'Moderately strong with room to grow.',
-      4: 'Strong and mostly intentional.',
-      5: 'Very strong, clear, and repeatable.'
-    };
-
-    function updateScore() {
-      scoreValue.textContent = slider.value;
-      helperText.textContent = labels[slider.value];
-    }
-
-    if (slider && scoreValue && helperText) {
-      slider.addEventListener('input', updateScore);
-      updateScore();
-    }
     applySlideOrder(slideOrder[0]);
     renderEditorCards();
   </script>
