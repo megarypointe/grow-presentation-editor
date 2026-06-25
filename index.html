@@ -737,6 +737,7 @@
   <script>
     const ORDER_STORAGE_KEY = 'discipleshipPresentationSlideOrder';
     const CUSTOM_SLIDES_STORAGE_KEY = 'discipleshipPresentationCustomSlides';
+    const DELETED_SLIDES_STORAGE_KEY = 'discipleshipPresentationDeletedSlides';
     const pdfSlides = [
       "page-003.webp", "page-004.webp", "page-005.webp",
       "page-006.webp", "page-007.webp", "page-008.webp", "page-009.webp", "page-010.webp",
@@ -757,7 +758,8 @@
     ];
 
     let customSlides = loadCustomSlides();
-    let slideDefinitions = [...baseSlideDefinitions, ...customSlides];
+    let deletedSlideIds = loadDeletedSlideIds();
+    let slideDefinitions = [...baseSlideDefinitions, ...customSlides].filter((slide) => !deletedSlideIds.includes(slide.id));
 
     const deck = document.querySelector('#deck');
     const editor = document.querySelector('#presentationEditor');
@@ -875,10 +877,28 @@
       localStorage.setItem(CUSTOM_SLIDES_STORAGE_KEY, JSON.stringify(customSlides));
     }
 
+    function loadDeletedSlideIds() {
+      try {
+        const savedDeletedIds = JSON.parse(localStorage.getItem(DELETED_SLIDES_STORAGE_KEY) || '[]');
+        if (!Array.isArray(savedDeletedIds)) return [];
+        return savedDeletedIds.filter((id) => typeof id === 'string');
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveDeletedSlideIds() {
+      localStorage.setItem(DELETED_SLIDES_STORAGE_KEY, JSON.stringify(deletedSlideIds));
+    }
+
+    function refreshSlideDefinitions() {
+      slideDefinitions = [...baseSlideDefinitions, ...customSlides].filter((slide) => !deletedSlideIds.includes(slide.id));
+      defaultSlideOrder = slideDefinitions.map((slide) => slide.id);
+    }
+
     function registerCustomSlide(definition) {
       customSlides.push(definition);
-      slideDefinitions = [...baseSlideDefinitions, ...customSlides];
-      defaultSlideOrder = slideDefinitions.map((slide) => slide.id);
+      refreshSlideDefinitions();
       saveCustomSlides();
       slideElementsById.set(definition.id, buildSlideElement(definition, slideDefinitions.length - 1));
       slideOrder.push(definition.id);
@@ -1152,9 +1172,13 @@
       if (customIndex >= 0) {
         customSlides.splice(customIndex, 1);
         saveCustomSlides();
-        slideDefinitions = [...baseSlideDefinitions, ...customSlides];
-        defaultSlideOrder = slideDefinitions.map((slide) => slide.id);
+      } else if (baseSlideDefinitions.some((slide) => slide.id === slideId) && !deletedSlideIds.includes(slideId)) {
+        deletedSlideIds.push(slideId);
+        saveDeletedSlideIds();
       }
+      slideElementsById.get(slideId)?.remove();
+      slideElementsById.delete(slideId);
+      refreshSlideDefinitions();
       persistSlideOrder();
       renderEditorCards();
       applySlideOrder(slideOrder[Math.min(currentSlide, slideOrder.length - 1)]);
