@@ -123,9 +123,12 @@ test('add slide upload infers media type without asking the user', () => {
 
 test('presentations can be managed and multiple decks can be created', () => {
   assert.match(html, /id="presentationManager"/);
-  assert.match(html, />Manage Presentations</);
+  assert.match(html, />Presentation Library</);
+  assert.match(html, /Choose a deck first, then edit its slides/);
+  assert.match(html, /id="activePresentationTitle"/);
   assert.match(html, /id="presentationList"/);
-  assert.match(html, /id="createPresentationForm"/);
+  assert.match(html, /id="newPresentationButton"/);
+  assert.match(html, /id="createPresentationForm"[^>]*hidden/);
   assert.match(html, /id="presentationNameInput"/);
   assert.match(html, /PRESENTATIONS_STORAGE_KEY/);
   assert.match(html, /ACTIVE_PRESENTATION_STORAGE_KEY/);
@@ -134,6 +137,20 @@ test('presentations can be managed and multiple decks can be created', () => {
   assert.match(html, /function createPresentation\(/);
   assert.match(html, /function selectPresentation\(/);
   assert.match(html, /function renderPresentationManager\(/);
+});
+
+test('presentation manager follows the UX checklist for hierarchy and clear deck cards', () => {
+  assert.match(html, /class="presentation-library-header"/);
+  assert.match(html, /class="presentation-library-copy"/);
+  assert.match(html, /class="presentation-card/);
+  assert.match(html, /class="presentation-card-title"/);
+  assert.match(html, /class="presentation-card-meta"/);
+  assert.match(html, /class="presentation-card-status"/);
+  assert.match(html, /data-presentation-action="select"/);
+  assert.match(html, /function getPresentationSlideCount\(/);
+  assert.match(html, /function updateActivePresentationTitle\(/);
+  assert.match(html, /function toggleCreatePresentationForm\(/);
+  assert.doesNotMatch(html, /class="presentation-chip/);
 });
 
 test('presentation-specific slide edits are isolated by active presentation', () => {

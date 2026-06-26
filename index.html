@@ -419,52 +419,124 @@
       font-weight: 750;
     }
 
-    .presentation-manager {
-      display: grid;
-      gap: 12px;
-      margin: 0 0 18px;
-      padding: 14px;
-      border: 1px solid rgba(226, 232, 240, 0.16);
-      border-radius: 20px;
-      background: rgba(15, 23, 42, 0.46);
+    .editor-kicker {
+      display: inline-flex;
+      color: #93c5fd;
+      font-size: 0.78rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
-    .presentation-manager h3 {
+    .presentation-manager {
+      display: grid;
+      gap: 16px;
+      margin: 0 0 22px;
+      padding: 18px;
+      border: 1px solid rgba(226, 232, 240, 0.14);
+      border-radius: 24px;
+      background:
+        linear-gradient(135deg, rgba(96, 165, 250, 0.12), transparent 42%),
+        rgba(15, 23, 42, 0.58);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 48px rgba(0, 0, 0, 0.18);
+    }
+
+    .presentation-library-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .presentation-library-copy {
+      display: grid;
+      gap: 4px;
+      max-width: 620px;
+    }
+
+    .presentation-library-copy h3 {
       color: white;
-      font-size: 1rem;
-      letter-spacing: -0.02em;
+      font-size: clamp(1.25rem, 2.4vw, 1.8rem);
+      font-weight: 850;
+      letter-spacing: -0.04em;
+    }
+
+    .presentation-library-copy p {
+      color: #94a3b8;
+      font-size: 0.98rem;
+      line-height: 1.5;
     }
 
     .presentation-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
     }
 
-    .presentation-chip {
-      border: 1px solid rgba(226, 232, 240, 0.18);
-      border-radius: 999px;
-      padding: 8px 12px;
-      background: rgba(255, 255, 255, 0.06);
+    .presentation-card {
+      min-height: 118px;
+      border: 1px solid rgba(226, 232, 240, 0.14);
+      border-radius: 18px;
+      padding: 14px;
+      display: grid;
+      align-content: space-between;
+      gap: 18px;
+      background: rgba(255, 255, 255, 0.045);
       color: #e5e7eb;
       cursor: pointer;
       font: inherit;
-      font-weight: 750;
+      text-align: left;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
     }
 
-    .presentation-chip.active,
-    .presentation-chip:hover,
-    .presentation-chip:focus-visible {
-      background: rgba(96, 165, 250, 0.24);
+    .presentation-card.active,
+    .presentation-card:hover,
+    .presentation-card:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(147, 197, 253, 0.46);
+      background: rgba(96, 165, 250, 0.15);
+      outline: none;
+    }
+
+    .presentation-card-title {
       color: white;
-      outline: 2px solid rgba(96, 165, 250, 0.36);
-      outline-offset: 2px;
+      font-size: 1.08rem;
+      font-weight: 850;
+      letter-spacing: -0.03em;
+    }
+
+    .presentation-card-meta {
+      color: #94a3b8;
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .presentation-card-status {
+      justify-self: flex-start;
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: rgba(255, 255, 255, 0.07);
+      color: #cbd5e1;
+      font-size: 0.75rem;
+      font-weight: 850;
+    }
+
+    .presentation-card.active .presentation-card-status {
+      background: rgba(96, 165, 250, 0.28);
+      color: #dbeafe;
     }
 
     .create-presentation-form {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      padding-top: 2px;
+    }
+
+    .create-presentation-form[hidden] {
+      display: none;
     }
 
     .create-presentation-form input {
@@ -762,8 +834,9 @@
     <div class="editor-shell">
       <header class="editor-header">
         <div class="editor-title-block">
+          <span class="editor-kicker">Presentation Editor</span>
           <div class="editor-title-row">
-            <h2>Presentation Editor</h2>
+            <h2 id="activePresentationTitle">Grow Presentation</h2>
             <button id="addMenuButton" class="add-menu-button" type="button" aria-label="Add slide" aria-expanded="false" aria-controls="addMenu">+</button>
             <div class="add-menu" id="addMenu" hidden>
               <button class="add-menu-option" type="button" data-tool="slider">Add Slider</button>
@@ -776,11 +849,17 @@
         </div>
       </header>
       <p class="editor-status" id="editorStatus" aria-live="polite"></p>
-      <section class="presentation-manager" id="presentationManager" aria-label="Manage Presentations">
-        <h3>Manage Presentations</h3>
+      <section class="presentation-manager" id="presentationManager" aria-label="Presentation Library">
+        <div class="presentation-library-header">
+          <div class="presentation-library-copy">
+            <h3>Presentation Library</h3>
+            <p>Choose a deck first, then edit its slides. Each presentation keeps its own order, custom slides, and deletes.</p>
+          </div>
+          <button class="tool-button" id="newPresentationButton" type="button" aria-expanded="false" aria-controls="createPresentationForm">+ New Presentation</button>
+        </div>
         <div class="presentation-list" id="presentationList" aria-label="Presentations"></div>
-        <form class="create-presentation-form" id="createPresentationForm">
-          <input id="presentationNameInput" type="text" placeholder="New presentation name" aria-label="New presentation name" />
+        <form class="create-presentation-form" id="createPresentationForm" hidden>
+          <input id="presentationNameInput" type="text" placeholder="Name this presentation" aria-label="New presentation name" />
           <button class="tool-button" type="submit">Create Presentation</button>
         </form>
       </section>
@@ -841,7 +920,9 @@
     const editor = document.querySelector('#presentationEditor');
     const editorGrid = document.querySelector('#editorGrid');
     const editorStatus = document.querySelector('#editorStatus');
+    const activePresentationTitle = document.querySelector('#activePresentationTitle');
     const presentationList = document.querySelector('#presentationList');
+    const newPresentationButton = document.querySelector('#newPresentationButton');
     const createPresentationForm = document.querySelector('#createPresentationForm');
     const presentationNameInput = document.querySelector('#presentationNameInput');
     const openEditorButton = document.querySelector('#openEditorButton');
@@ -1061,13 +1142,36 @@
       editorStatus.textContent = `Editing ${activePresentation.title}.`;
     }
 
+    function getPresentationSlideCount(presentation) {
+      const customCount = Array.isArray(presentation.customSlides) ? presentation.customSlides.length : 0;
+      const deletedCount = Array.isArray(presentation.deletedSlideIds) ? presentation.deletedSlideIds.length : 0;
+      return Math.max(0, baseSlideDefinitions.length + customCount - deletedCount);
+    }
+
+    function updateActivePresentationTitle() {
+      activePresentationTitle.textContent = activePresentation.title;
+      document.title = `${activePresentation.title} Editor`;
+    }
+
+    function toggleCreatePresentationForm(forceOpen) {
+      const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : createPresentationForm.hidden;
+      createPresentationForm.hidden = !shouldOpen;
+      newPresentationButton.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+      if (shouldOpen) presentationNameInput.focus();
+    }
+
     function renderPresentationManager() {
-      presentationList.innerHTML = presentations.map((presentation) => `
-        <button class="presentation-chip${presentation.id === activePresentationId ? ' active' : ''}" type="button" data-presentation-id="${escapeAttribute(presentation.id)}" aria-pressed="${presentation.id === activePresentationId ? 'true' : 'false'}">
-          ${escapeAttribute(presentation.title)}
-        </button>
-      `).join('');
-      presentationList.querySelectorAll('[data-presentation-id]').forEach((button) => {
+      presentationList.innerHTML = presentations.map((presentation) => {
+        const isActive = presentation.id === activePresentationId;
+        return `
+          <button class="presentation-card${isActive ? ' active' : ''}" type="button" data-presentation-action="select" data-presentation-id="${escapeAttribute(presentation.id)}" aria-pressed="${isActive ? 'true' : 'false'}">
+            <span class="presentation-card-title">${escapeAttribute(presentation.title)}</span>
+            <span class="presentation-card-meta">${getPresentationSlideCount(presentation)} slides</span>
+            <span class="presentation-card-status">${isActive ? 'Editing now' : 'Open deck'}</span>
+          </button>
+        `;
+      }).join('');
+      presentationList.querySelectorAll('[data-presentation-action="select"]').forEach((button) => {
         button.addEventListener('click', () => selectPresentation(button.dataset.presentationId));
       });
     }
@@ -1078,6 +1182,7 @@
       renderDeckSlides();
       applySlideOrder(slideOrder[0]);
       renderEditorCards();
+      updateActivePresentationTitle();
       renderPresentationManager();
     }
 
@@ -1471,6 +1576,7 @@
 
     openEditorButton.addEventListener('click', openEditor);
     exitEditorButton.addEventListener('click', closeEditor);
+    newPresentationButton?.addEventListener('click', () => toggleCreatePresentationForm());
     addMenuButton?.addEventListener('click', () => toggleAddMenu());
     addMenuOptions.forEach((option) => {
       option.addEventListener('click', () => showToolPanel(option.dataset.tool));
@@ -1479,6 +1585,7 @@
       event.preventDefault();
       createPresentation(presentationNameInput.value);
       createPresentationForm.reset();
+      toggleCreatePresentationForm(false);
     });
     [sliderMinInput, sliderMaxInput].forEach((input) => {
       input?.addEventListener('input', () => renderSliderLabelFields());
