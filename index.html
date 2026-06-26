@@ -334,17 +334,30 @@
     }
 
     .add-menu-button {
-      width: 34px;
-      height: 34px;
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
       border: 1px solid rgba(226, 232, 240, 0.18);
       border-radius: 999px;
+      padding: 6px 12px 6px 8px;
       background: rgba(255, 255, 255, 0.08);
       color: white;
       cursor: pointer;
       font: inherit;
-      font-size: 1.35rem;
-      font-weight: 700;
+      font-size: 0.92rem;
+      font-weight: 850;
       line-height: 1;
+    }
+
+    .add-menu-button span {
+      display: grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: rgba(96, 165, 250, 0.24);
+      font-size: 1rem;
     }
 
     .add-menu-button:hover,
@@ -430,9 +443,9 @@
 
     .presentation-manager {
       display: grid;
-      gap: 16px;
-      margin: 0 0 22px;
-      padding: 18px;
+      gap: 14px;
+      margin: 0 0 18px;
+      padding: 16px;
       border: 1px solid rgba(226, 232, 240, 0.14);
       border-radius: 24px;
       background:
@@ -442,11 +455,24 @@
     }
 
     .presentation-library-header {
+      display: contents;
+    }
+
+    .library-layout {
+      grid-template-columns: minmax(250px, 0.9fr) minmax(380px, 1.4fr);
+      align-items: start;
+    }
+
+    .library-main {
+      display: grid;
+      gap: 12px;
+    }
+
+    .library-actions {
       display: flex;
       flex-wrap: wrap;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 16px;
+      gap: 8px;
+      justify-content: flex-start;
     }
 
     .presentation-library-copy {
@@ -470,18 +496,17 @@
 
     .presentation-list {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
       gap: 12px;
     }
 
     .presentation-card {
-      min-height: 118px;
       border: 1px solid rgba(226, 232, 240, 0.14);
       border-radius: 18px;
-      padding: 14px;
+      padding: 13px;
       display: grid;
       align-content: space-between;
-      gap: 18px;
+      gap: 10px;
       background: rgba(255, 255, 255, 0.045);
       color: #e5e7eb;
       cursor: pointer;
@@ -837,7 +862,7 @@
           <span class="editor-kicker">Presentation Editor</span>
           <div class="editor-title-row">
             <h2 id="activePresentationTitle">Grow Presentation</h2>
-            <button id="addMenuButton" class="add-menu-button" type="button" aria-label="Add slide" aria-expanded="false" aria-controls="addMenu">+</button>
+            <button id="addMenuButton" class="add-menu-button" type="button" aria-label="Add slide to active presentation" aria-expanded="false" aria-controls="addMenu"><span aria-hidden="true">+</span> Add Slide</button>
             <div class="add-menu" id="addMenu" hidden>
               <button class="add-menu-option" type="button" data-tool="slider">Add Slider</button>
               <button class="add-menu-option" type="button" data-tool="media">Add Slide</button>
@@ -845,23 +870,27 @@
           </div>
         </div>
         <div class="editor-actions">
-          <button id="exitEditorButton" class="editor-link" type="button">Open Presentation</button>
+          <button id="exitEditorButton" class="editor-link present-button" type="button">Present</button>
         </div>
       </header>
       <p class="editor-status" id="editorStatus" aria-live="polite"></p>
-      <section class="presentation-manager" id="presentationManager" aria-label="Presentation Library">
+      <section class="presentation-manager library-layout" id="presentationManager" aria-label="Presentation Library">
         <div class="presentation-library-header">
-          <div class="presentation-library-copy">
-            <h3>Presentation Library</h3>
-            <p>Choose a deck first, then edit its slides. Each presentation keeps its own order, custom slides, and deletes.</p>
+          <div class="library-main">
+            <div class="presentation-library-copy">
+              <h3>Presentation Library</h3>
+              <p>Each presentation has its own slide order, custom slides, and removed slides.</p>
+            </div>
+            <div class="library-actions">
+              <button class="tool-button" id="newPresentationButton" type="button" aria-expanded="false" aria-controls="createPresentationForm">+ New Presentation</button>
+            </div>
+            <form class="create-presentation-form" id="createPresentationForm" hidden>
+              <input id="presentationNameInput" type="text" placeholder="Name this presentation" aria-label="New presentation name" />
+              <button class="tool-button" type="submit">Create Presentation</button>
+            </form>
           </div>
-          <button class="tool-button" id="newPresentationButton" type="button" aria-expanded="false" aria-controls="createPresentationForm">+ New Presentation</button>
         </div>
         <div class="presentation-list" id="presentationList" aria-label="Presentations"></div>
-        <form class="create-presentation-form" id="createPresentationForm" hidden>
-          <input id="presentationNameInput" type="text" placeholder="Name this presentation" aria-label="New presentation name" />
-          <button class="tool-button" type="submit">Create Presentation</button>
-        </form>
       </section>
       <div class="editor-tools" aria-label="Add slides">
         <form class="editor-tool tool-panel" id="addSliderForm" hidden>
@@ -1167,7 +1196,7 @@
           <button class="presentation-card${isActive ? ' active' : ''}" type="button" data-presentation-action="select" data-presentation-id="${escapeAttribute(presentation.id)}" aria-pressed="${isActive ? 'true' : 'false'}">
             <span class="presentation-card-title">${escapeAttribute(presentation.title)}</span>
             <span class="presentation-card-meta">${getPresentationSlideCount(presentation)} slides</span>
-            <span class="presentation-card-status">${isActive ? 'Editing now' : 'Open deck'}</span>
+            <span class="presentation-card-status">${isActive ? 'Currently editing' : 'Switch deck'}</span>
           </button>
         `;
       }).join('');
