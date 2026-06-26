@@ -5,6 +5,15 @@ const path = require('node:path');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
+
+test('page asks browsers not to reuse stale editor HTML', () => {
+  assert.match(html, /http-equiv="Cache-Control"/);
+  assert.match(html, /no-store, no-cache, must-revalidate, max-age=0/);
+  assert.match(html, /http-equiv="Pragma"/);
+  assert.match(html, /http-equiv="Expires"/);
+  assert.match(html, /name="build-version"/);
+});
+
 test('presentation editor page exists with reorder controls', () => {
   assert.match(html, /id="presentationEditor"/);
   assert.match(html, />Presentation Editor</);
