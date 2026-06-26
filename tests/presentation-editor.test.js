@@ -121,11 +121,35 @@ test('add slide upload infers media type without asking the user', () => {
 
 
 
+test('presentations can be managed and multiple decks can be created', () => {
+  assert.match(html, /id="presentationManager"/);
+  assert.match(html, />Manage Presentations</);
+  assert.match(html, /id="presentationList"/);
+  assert.match(html, /id="createPresentationForm"/);
+  assert.match(html, /id="presentationNameInput"/);
+  assert.match(html, /PRESENTATIONS_STORAGE_KEY/);
+  assert.match(html, /ACTIVE_PRESENTATION_STORAGE_KEY/);
+  assert.match(html, /function createDefaultPresentations\(/);
+  assert.match(html, /createPresentationRecord\('second-presentation', 'Second Presentation'\)/);
+  assert.match(html, /function createPresentation\(/);
+  assert.match(html, /function selectPresentation\(/);
+  assert.match(html, /function renderPresentationManager\(/);
+});
+
+test('presentation-specific slide edits are isolated by active presentation', () => {
+  assert.match(html, /activePresentation\.customSlides/);
+  assert.match(html, /activePresentation\.deletedSlideIds/);
+  assert.match(html, /activePresentation\.slideOrder/);
+  assert.match(html, /function saveActivePresentation\(/);
+  assert.match(html, /function loadPresentationState\(/);
+  assert.match(html, /function rebuildPresentation\(/);
+});
+
 test('deleted built-in slides are persisted instead of reappearing at the end', () => {
   assert.match(html, /DELETED_SLIDES_STORAGE_KEY/);
   assert.match(html, /function loadDeletedSlideIds\(/);
   assert.match(html, /function saveDeletedSlideIds\(/);
-  assert.match(html, /let deletedSlideIds = loadDeletedSlideIds\(\)/);
+  assert.match(html, /deletedSlideIds = Array\.isArray\(activePresentation\.deletedSlideIds\)/);
   assert.match(html, /filter\(\(slide\) => !deletedSlideIds\.includes\(slide\.id\)\)/);
   assert.match(html, /deletedSlideIds\.push\(slideId\)/);
   assert.match(html, /saveDeletedSlideIds\(\)/);

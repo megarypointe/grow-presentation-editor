@@ -419,6 +419,69 @@
       font-weight: 750;
     }
 
+    .presentation-manager {
+      display: grid;
+      gap: 12px;
+      margin: 0 0 18px;
+      padding: 14px;
+      border: 1px solid rgba(226, 232, 240, 0.16);
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.46);
+    }
+
+    .presentation-manager h3 {
+      color: white;
+      font-size: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .presentation-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .presentation-chip {
+      border: 1px solid rgba(226, 232, 240, 0.18);
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #e5e7eb;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 750;
+    }
+
+    .presentation-chip.active,
+    .presentation-chip:hover,
+    .presentation-chip:focus-visible {
+      background: rgba(96, 165, 250, 0.24);
+      color: white;
+      outline: 2px solid rgba(96, 165, 250, 0.36);
+      outline-offset: 2px;
+    }
+
+    .create-presentation-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .create-presentation-form input {
+      min-width: min(280px, 100%);
+      flex: 1;
+      border: 1px solid rgba(226, 232, 240, 0.18);
+      border-radius: 999px;
+      padding: 10px 13px;
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      font: inherit;
+    }
+
+    .create-presentation-form input::placeholder {
+      color: #94a3b8;
+    }
+
     .editor-tools {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -713,6 +776,14 @@
         </div>
       </header>
       <p class="editor-status" id="editorStatus" aria-live="polite"></p>
+      <section class="presentation-manager" id="presentationManager" aria-label="Manage Presentations">
+        <h3>Manage Presentations</h3>
+        <div class="presentation-list" id="presentationList" aria-label="Presentations"></div>
+        <form class="create-presentation-form" id="createPresentationForm">
+          <input id="presentationNameInput" type="text" placeholder="New presentation name" aria-label="New presentation name" />
+          <button class="tool-button" type="submit">Create Presentation</button>
+        </form>
+      </section>
       <div class="editor-tools" aria-label="Add slides">
         <form class="editor-tool tool-panel" id="addSliderForm" hidden>
           <h3>Add slider question</h3>
@@ -738,6 +809,8 @@
     const ORDER_STORAGE_KEY = 'discipleshipPresentationSlideOrder';
     const CUSTOM_SLIDES_STORAGE_KEY = 'discipleshipPresentationCustomSlides';
     const DELETED_SLIDES_STORAGE_KEY = 'discipleshipPresentationDeletedSlides';
+    const PRESENTATIONS_STORAGE_KEY = 'discipleshipPresentations';
+    const ACTIVE_PRESENTATION_STORAGE_KEY = 'discipleshipActivePresentationId';
     const pdfSlides = [
       "page-003.webp", "page-004.webp", "page-005.webp",
       "page-006.webp", "page-007.webp", "page-008.webp", "page-009.webp", "page-010.webp",
@@ -757,14 +830,20 @@
       }))
     ];
 
-    let customSlides = loadCustomSlides();
-    let deletedSlideIds = loadDeletedSlideIds();
-    let slideDefinitions = [...baseSlideDefinitions, ...customSlides].filter((slide) => !deletedSlideIds.includes(slide.id));
+    let presentations = loadPresentations();
+    let activePresentationId = loadActivePresentationId(presentations);
+    let activePresentation = presentations.find((presentation) => presentation.id === activePresentationId) || presentations[0];
+    let customSlides = [];
+    let deletedSlideIds = [];
+    let slideDefinitions = [];
 
     const deck = document.querySelector('#deck');
     const editor = document.querySelector('#presentationEditor');
     const editorGrid = document.querySelector('#editorGrid');
     const editorStatus = document.querySelector('#editorStatus');
+    const presentationList = document.querySelector('#presentationList');
+    const createPresentationForm = document.querySelector('#createPresentationForm');
+    const presentationNameInput = document.querySelector('#presentationNameInput');
     const openEditorButton = document.querySelector('#openEditorButton');
     const exitEditorButton = document.querySelector('#exitEditorButton');
     const addMenuButton = document.querySelector('#addMenuButton');
@@ -777,9 +856,9 @@
     const sliderLabelFields = document.querySelector('#sliderLabelFields');
     const addMediaForm = document.querySelector('#addMediaForm');
     const mediaFileInput = document.querySelector('#mediaFileInput');
-    let defaultSlideOrder = slideDefinitions.map((slide) => slide.id);
+    let defaultSlideOrder = [];
     const slideElementsById = new Map();
-    let slideOrder = loadSlideOrder();
+    let slideOrder = [];
     let slides = [];
     let currentSlide = 0;
     let draggedSlideId = null;
@@ -855,40 +934,151 @@
       return section;
     }
 
-    slideDefinitions.forEach((definition, index) => {
-      const section = buildSlideElement(definition, index);
-      deck.appendChild(section);
-      slideElementsById.set(section.dataset.slideId, section);
-    });
+    function renderDeckSlides() {
+      deck.innerHTML = '';
+      slideElementsById.clear();
+      slideDefinitions.forEach((definition, index) => {
+        const section = buildSlideElement(definition, index);
+        deck.appendChild(section);
+        slideElementsById.set(section.dataset.slideId, section);
+      });
+    }
 
-    function loadCustomSlides() {
+    function readStorageArray(key) {
       try {
-        const savedSlides = JSON.parse(localStorage.getItem(CUSTOM_SLIDES_STORAGE_KEY) || '[]');
-        if (!Array.isArray(savedSlides)) return [];
-        return savedSlides.filter((slide) => slide && slide.id && [
-          'custom-slider', 'media-image', 'media-video', 'media-pdf', 'media-embed'
-        ].includes(slide.kind));
+        const value = JSON.parse(localStorage.getItem(key) || '[]');
+        return Array.isArray(value) ? value : [];
       } catch (error) {
         return [];
       }
+    }
+
+    function loadCustomSlides() {
+      return readStorageArray(CUSTOM_SLIDES_STORAGE_KEY).filter((slide) => slide && slide.id && [
+        'custom-slider', 'media-image', 'media-video', 'media-pdf', 'media-embed'
+      ].includes(slide.kind));
     }
 
     function saveCustomSlides() {
-      localStorage.setItem(CUSTOM_SLIDES_STORAGE_KEY, JSON.stringify(customSlides));
+      activePresentation.customSlides = customSlides;
+      saveActivePresentation();
     }
 
     function loadDeletedSlideIds() {
-      try {
-        const savedDeletedIds = JSON.parse(localStorage.getItem(DELETED_SLIDES_STORAGE_KEY) || '[]');
-        if (!Array.isArray(savedDeletedIds)) return [];
-        return savedDeletedIds.filter((id) => typeof id === 'string');
-      } catch (error) {
-        return [];
-      }
+      return readStorageArray(DELETED_SLIDES_STORAGE_KEY).filter((id) => typeof id === 'string');
     }
 
     function saveDeletedSlideIds() {
+      activePresentation.deletedSlideIds = deletedSlideIds;
+      saveActivePresentation();
+    }
+
+    function normalizeSlideOrder(savedOrder, availableIds = defaultSlideOrder) {
+      const savedIds = Array.isArray(savedOrder) ? savedOrder.filter((id) => availableIds.includes(id)) : [];
+      return [
+        ...savedIds,
+        ...availableIds.filter((id) => !savedIds.includes(id))
+      ];
+    }
+
+    function createPresentationRecord(id, title, overrides = {}) {
+      return {
+        id,
+        title,
+        customSlides: overrides.customSlides || [],
+        deletedSlideIds: overrides.deletedSlideIds || [],
+        slideOrder: overrides.slideOrder || baseSlideDefinitions.map((slide) => slide.id)
+      };
+    }
+
+    function createDefaultPresentations() {
+      const legacyCustomSlides = loadCustomSlides();
+      const legacyDeletedSlideIds = loadDeletedSlideIds();
+      const availableIds = [...baseSlideDefinitions, ...legacyCustomSlides]
+        .filter((slide) => !legacyDeletedSlideIds.includes(slide.id))
+        .map((slide) => slide.id);
+      return [
+        createPresentationRecord('grow-presentation', 'Grow Presentation', {
+          customSlides: legacyCustomSlides,
+          deletedSlideIds: legacyDeletedSlideIds,
+          slideOrder: normalizeSlideOrder(readStorageArray(ORDER_STORAGE_KEY), availableIds)
+        }),
+        createPresentationRecord('second-presentation', 'Second Presentation')
+      ];
+    }
+
+    function loadPresentations() {
+      const savedPresentations = readStorageArray(PRESENTATIONS_STORAGE_KEY)
+        .filter((presentation) => presentation && presentation.id && presentation.title);
+      const presentationsToUse = savedPresentations.length ? savedPresentations : createDefaultPresentations();
+      if (!presentationsToUse.some((presentation) => presentation.id === 'second-presentation')) {
+        presentationsToUse.push(createPresentationRecord('second-presentation', 'Second Presentation'));
+      }
+      return presentationsToUse;
+    }
+
+    function loadActivePresentationId(availablePresentations) {
+      const savedActiveId = localStorage.getItem(ACTIVE_PRESENTATION_STORAGE_KEY);
+      return availablePresentations.some((presentation) => presentation.id === savedActiveId)
+        ? savedActiveId
+        : availablePresentations[0].id;
+    }
+
+    function loadPresentationState() {
+      activePresentation = presentations.find((presentation) => presentation.id === activePresentationId) || presentations[0];
+      activePresentationId = activePresentation.id;
+      customSlides = Array.isArray(activePresentation.customSlides) ? activePresentation.customSlides : [];
+      deletedSlideIds = Array.isArray(activePresentation.deletedSlideIds) ? activePresentation.deletedSlideIds : [];
+      refreshSlideDefinitions();
+      slideOrder = loadSlideOrder();
+      activePresentation.slideOrder = slideOrder;
+      saveActivePresentation();
+    }
+
+    function saveActivePresentation() {
+      activePresentation.customSlides = customSlides;
+      activePresentation.deletedSlideIds = deletedSlideIds;
+      activePresentation.slideOrder = slideOrder;
+      localStorage.setItem(PRESENTATIONS_STORAGE_KEY, JSON.stringify(presentations));
+      localStorage.setItem(ACTIVE_PRESENTATION_STORAGE_KEY, activePresentation.id);
+      localStorage.setItem(CUSTOM_SLIDES_STORAGE_KEY, JSON.stringify(customSlides));
       localStorage.setItem(DELETED_SLIDES_STORAGE_KEY, JSON.stringify(deletedSlideIds));
+      localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(slideOrder));
+    }
+
+    function createPresentation(name) {
+      const title = name.trim() || `Presentation ${presentations.length + 1}`;
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'presentation';
+      const id = `${slug}-${Date.now()}`;
+      presentations.push(createPresentationRecord(id, title));
+      selectPresentation(id);
+    }
+
+    function selectPresentation(presentationId) {
+      if (!presentations.some((presentation) => presentation.id === presentationId)) return;
+      activePresentationId = presentationId;
+      rebuildPresentation();
+      editorStatus.textContent = `Editing ${activePresentation.title}.`;
+    }
+
+    function renderPresentationManager() {
+      presentationList.innerHTML = presentations.map((presentation) => `
+        <button class="presentation-chip${presentation.id === activePresentationId ? ' active' : ''}" type="button" data-presentation-id="${escapeAttribute(presentation.id)}" aria-pressed="${presentation.id === activePresentationId ? 'true' : 'false'}">
+          ${escapeAttribute(presentation.title)}
+        </button>
+      `).join('');
+      presentationList.querySelectorAll('[data-presentation-id]').forEach((button) => {
+        button.addEventListener('click', () => selectPresentation(button.dataset.presentationId));
+      });
+    }
+
+    function rebuildPresentation() {
+      loadPresentationState();
+      currentSlide = 0;
+      renderDeckSlides();
+      applySlideOrder(slideOrder[0]);
+      renderEditorCards();
+      renderPresentationManager();
     }
 
     function refreshSlideDefinitions() {
@@ -1007,20 +1197,12 @@
     }
 
     function loadSlideOrder() {
-      try {
-        const savedOrder = JSON.parse(localStorage.getItem(ORDER_STORAGE_KEY) || '[]');
-        const savedIds = Array.isArray(savedOrder) ? savedOrder.filter((id) => defaultSlideOrder.includes(id)) : [];
-        return [
-          ...savedIds,
-          ...defaultSlideOrder.filter((id) => !savedIds.includes(id))
-        ];
-      } catch (error) {
-        return [...defaultSlideOrder];
-      }
+      return normalizeSlideOrder(activePresentation.slideOrder, defaultSlideOrder);
     }
 
     function persistSlideOrder() {
-      localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(slideOrder));
+      activePresentation.slideOrder = slideOrder;
+      saveActivePresentation();
       editorStatus.textContent = `Saved order for ${slideOrder.length} slides.`;
     }
 
@@ -1293,6 +1475,11 @@
     addMenuOptions.forEach((option) => {
       option.addEventListener('click', () => showToolPanel(option.dataset.tool));
     });
+    createPresentationForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      createPresentation(presentationNameInput.value);
+      createPresentationForm.reset();
+    });
     [sliderMinInput, sliderMaxInput].forEach((input) => {
       input?.addEventListener('input', () => renderSliderLabelFields());
     });
@@ -1342,8 +1529,7 @@
       addMediaForm.reset();
     });
 
-    applySlideOrder(slideOrder[0]);
-    renderEditorCards();
+    rebuildPresentation();
   </script>
 </body>
 </html>
