@@ -188,6 +188,7 @@ test('editor can add slider-question, button-choice, and media slides from hidde
   assert.match(html, /button-choice-grid/);
   assert.match(html, /aria-pressed/);
   assert.match(html, /definition\.choices/);
+  assert.match(html, /if \(thumbnail\.kind === 'custom-buttons'\) return `<div class="slide-card-question">\$\{escapeAttribute\(thumbnail\.question\)\}<\/div>`;/);
   assert.match(html, /definition\.kind === 'custom-slider' \|\| definition\.kind === 'custom-buttons'/);
   assert.match(html, /editCustomSlide\(slideId\)/);
   assert.match(html, /id="addMediaForm"/);

@@ -1930,7 +1930,8 @@
       if (thumbnail.kind === 'media-video') return '<div class="slide-card-placeholder">Video</div>';
       if (thumbnail.kind === 'media-pdf') return '<div class="slide-card-placeholder">PDF</div>';
       if (thumbnail.kind === 'custom-slider') return `<div class="slide-card-question">${escapeAttribute(thumbnail.question)}</div>`;
-      return '<div class="slide-card-placeholder">Slideshow</div>';
+      if (thumbnail.kind === 'custom-buttons') return `<div class="slide-card-question">${escapeAttribute(thumbnail.question)}</div>`;
+      return `<div class="slide-card-placeholder">${escapeAttribute(thumbnail.title || 'Slide')}</div>`;
     }
 
     function updateActivePresentationTitle() {
