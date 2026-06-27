@@ -1355,6 +1355,11 @@
     async function requireSession() {
       try {
         const data = await authRequest('/session');
+        if (!data.user) {
+          currentUser = null;
+          showLoginPanel();
+          return false;
+        }
         currentUser = data.user;
         showAuthenticatedChrome();
         return true;
