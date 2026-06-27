@@ -1043,11 +1043,7 @@
   </section>
 
   <script>
-    const ORDER_STORAGE_KEY = 'discipleshipPresentationSlideOrder';
-    const CUSTOM_SLIDES_STORAGE_KEY = 'discipleshipPresentationCustomSlides';
-    const DELETED_SLIDES_STORAGE_KEY = 'discipleshipPresentationDeletedSlides';
-    const PRESENTATIONS_STORAGE_KEY = 'discipleshipPresentations';
-    const ACTIVE_PRESENTATION_STORAGE_KEY = 'discipleshipActivePresentationId';
+    const PRESENTATION_API_URL = 'https://grow-presentation-api.kenny-c8b.workers.dev/api/presentations';
     const pdfSlides = [
       "page-003.webp", "page-004.webp", "page-005.webp",
       "page-006.webp", "page-007.webp", "page-008.webp", "page-009.webp", "page-010.webp",
@@ -1067,9 +1063,9 @@
       }))
     ];
 
-    let presentations = loadPresentations();
-    let activePresentationId = loadActivePresentationId(presentations);
-    let activePresentation = presentations.find((presentation) => presentation.id === activePresentationId) || presentations[0];
+    let presentations = [];
+    let activePresentationId = '';
+    let activePresentation = null;
     let customSlides = [];
     let deletedSlideIds = [];
     let slideDefinitions = [];
@@ -1183,28 +1179,9 @@
       });
     }
 
-    function readStorageArray(key) {
-      try {
-        const value = JSON.parse(localStorage.getItem(key) || '[]');
-        return Array.isArray(value) ? value : [];
-      } catch (error) {
-        return [];
-      }
-    }
-
-    function loadCustomSlides() {
-      return readStorageArray(CUSTOM_SLIDES_STORAGE_KEY).filter((slide) => slide && slide.id && [
-        'custom-slider', 'media-image', 'media-video', 'media-pdf', 'media-embed'
-      ].includes(slide.kind));
-    }
-
     function saveCustomSlides() {
       activePresentation.customSlides = customSlides;
       saveActivePresentation();
-    }
-
-    function loadDeletedSlideIds() {
-      return readStorageArray(DELETED_SLIDES_STORAGE_KEY).filter((id) => typeof id === 'string');
     }
 
     function saveDeletedSlideIds() {
@@ -1231,17 +1208,8 @@
     }
 
     function createDefaultPresentations() {
-      const legacyCustomSlides = loadCustomSlides();
-      const legacyDeletedSlideIds = loadDeletedSlideIds();
-      const availableIds = [...baseSlideDefinitions, ...legacyCustomSlides]
-        .filter((slide) => !legacyDeletedSlideIds.includes(slide.id))
-        .map((slide) => slide.id);
       return [
-        createPresentationRecord('grow-presentation', 'Grow Presentation', {
-          customSlides: legacyCustomSlides,
-          deletedSlideIds: legacyDeletedSlideIds,
-          slideOrder: normalizeSlideOrder(readStorageArray(ORDER_STORAGE_KEY), availableIds)
-        }),
+        createPresentationRecord('grow-presentation', 'Grow Presentation'),
         createPresentationRecord('second-presentation', 'Second Presentation')
       ];
     }
@@ -1254,52 +1222,81 @@
       });
     }
 
-    function loadPresentations() {
-      const savedPresentations = readStorageArray(PRESENTATIONS_STORAGE_KEY)
-        .filter((presentation) => presentation && presentation.id && presentation.title)
-        .map(normalizePresentationRecord);
-      const presentationsToUse = savedPresentations.length ? savedPresentations : createDefaultPresentations().map(normalizePresentationRecord);
-      if (!presentationsToUse.some((presentation) => presentation.id === 'second-presentation')) {
-        presentationsToUse.push(createPresentationRecord('second-presentation', 'Second Presentation'));
+    async function apiRequest(path = '', options = {}) {
+      const response = await fetch(PRESENTATION_API_URL + path, {
+        ...options,
+        headers: {
+          'content-type': 'application/json',
+          ...(options.headers || {})
+        }
+      });
+      if (!response.ok) throw new Error(`Presentation API returned ${response.status}`);
+      return response.json();
+    }
+
+    async function loadPresentations() {
+      try {
+        const data = await apiRequest();
+        const presentationsToUse = Array.isArray(data.presentations) && data.presentations.length
+          ? data.presentations.map(normalizePresentationRecord)
+          : createDefaultPresentations().map(normalizePresentationRecord);
+        if (!presentationsToUse.some((presentation) => presentation.id === 'second-presentation')) {
+          presentationsToUse.push(createPresentationRecord('second-presentation', 'Second Presentation'));
+        }
+        return presentationsToUse;
+      } catch (error) {
+        editorStatus.textContent = 'Could not reach the presentation server. Showing the default slideshows for now.';
+        return createDefaultPresentations().map(normalizePresentationRecord);
       }
-      return presentationsToUse;
     }
 
     function loadActivePresentationId(availablePresentations) {
-      const savedActiveId = localStorage.getItem(ACTIVE_PRESENTATION_STORAGE_KEY);
-      return availablePresentations.some((presentation) => presentation.id === savedActiveId)
-        ? savedActiveId
-        : availablePresentations[0].id;
+      return availablePresentations[0]?.id || '';
     }
 
     function loadPresentationState() {
       activePresentation = presentations.find((presentation) => presentation.id === activePresentationId) || presentations[0];
+      if (!activePresentation) return;
       activePresentationId = activePresentation.id;
       customSlides = Array.isArray(activePresentation.customSlides) ? activePresentation.customSlides : [];
       deletedSlideIds = Array.isArray(activePresentation.deletedSlideIds) ? activePresentation.deletedSlideIds : [];
       refreshSlideDefinitions();
       slideOrder = loadSlideOrder();
       activePresentation.slideOrder = slideOrder;
-      saveActivePresentation();
     }
 
-    function saveActivePresentation() {
+    async function saveActivePresentation() {
+      if (!activePresentation) return;
       activePresentation.customSlides = customSlides;
       activePresentation.deletedSlideIds = deletedSlideIds;
       activePresentation.slideOrder = slideOrder;
-      localStorage.setItem(PRESENTATIONS_STORAGE_KEY, JSON.stringify(presentations));
-      localStorage.setItem(ACTIVE_PRESENTATION_STORAGE_KEY, activePresentation.id);
-      localStorage.setItem(CUSTOM_SLIDES_STORAGE_KEY, JSON.stringify(customSlides));
-      localStorage.setItem(DELETED_SLIDES_STORAGE_KEY, JSON.stringify(deletedSlideIds));
-      localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(slideOrder));
+      try {
+        const data = await apiRequest(`/${encodeURIComponent(activePresentation.id)}`, {
+          method: 'PUT',
+          body: JSON.stringify(activePresentation)
+        });
+        const saved = normalizePresentationRecord(data.presentation);
+        const index = presentations.findIndex((presentation) => presentation.id === saved.id);
+        if (index >= 0) presentations[index] = saved;
+        activePresentation = presentations.find((presentation) => presentation.id === saved.id) || saved;
+      } catch (error) {
+        editorStatus.textContent = 'Could not save to the presentation server. Try again in a moment.';
+      }
     }
 
-    function createPresentation(name) {
+    async function createPresentation(name) {
       const title = name.trim() || `Slideshow ${presentations.length + 1}`;
-      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'presentation';
-      const id = `${slug}-${Date.now()}`;
-      presentations.push(createPresentationRecord(id, title));
-      selectPresentation(id);
+      try {
+        const data = await apiRequest('', {
+          method: 'POST',
+          body: JSON.stringify({ title })
+        });
+        const presentation = normalizePresentationRecord(data.presentation);
+        presentations.push(presentation);
+        selectPresentation(presentation.id);
+      } catch (error) {
+        editorStatus.textContent = 'Could not create that slideshow on the server.';
+      }
     }
 
     function selectPresentation(presentationId) {
@@ -1341,6 +1338,7 @@
     }
 
     function updateActivePresentationTitle() {
+      if (!activePresentation) return;
       activePresentationTitle.textContent = activePresentation.title;
       document.title = `${activePresentation.title} Editor`;
     }
@@ -1418,28 +1416,33 @@
       editorWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    function duplicatePresentation(presentationId) {
-      const source = presentations.find((presentation) => presentation.id === presentationId);
-      if (!source) return;
-      const copy = createPresentationRecord(`presentation-${Date.now()}`, `${source.title} Copy`, {
-        customSlides: JSON.parse(JSON.stringify(source.customSlides || [])),
-        deletedSlideIds: [...(source.deletedSlideIds || [])],
-        slideOrder: [...(source.slideOrder || [])]
-      });
-      presentations.push(copy);
-      activePresentationId = copy.id;
-      rebuildPresentation();
+    async function duplicatePresentation(presentationId) {
+      try {
+        const data = await apiRequest(`/${encodeURIComponent(presentationId)}/duplicate`, { method: 'POST' });
+        const copy = normalizePresentationRecord(data.presentation);
+        presentations.push(copy);
+        activePresentationId = copy.id;
+        rebuildPresentation();
+      } catch (error) {
+        editorStatus.textContent = 'Could not duplicate that slideshow on the server.';
+      }
     }
 
-    function deletePresentation(presentationId) {
+    async function deletePresentation(presentationId) {
       if (presentations.length <= 1) return;
-      presentations = presentations.filter((presentation) => presentation.id !== presentationId);
-      if (activePresentationId === presentationId) activePresentationId = presentations[0].id;
-      rebuildPresentation();
+      try {
+        await apiRequest(`/${encodeURIComponent(presentationId)}`, { method: 'DELETE' });
+        presentations = presentations.filter((presentation) => presentation.id !== presentationId);
+        if (activePresentationId === presentationId) activePresentationId = presentations[0].id;
+        rebuildPresentation();
+      } catch (error) {
+        editorStatus.textContent = 'Could not delete that slideshow on the server.';
+      }
     }
 
     function rebuildPresentation() {
       loadPresentationState();
+      if (!activePresentation) return;
       currentSlide = 0;
       renderDeckSlides();
       applySlideOrder(slideOrder[0]);
@@ -1564,7 +1567,7 @@
     }
 
     function loadSlideOrder() {
-      return normalizeSlideOrder(activePresentation.slideOrder, defaultSlideOrder);
+      return normalizeSlideOrder(activePresentation?.slideOrder, defaultSlideOrder);
     }
 
     function persistSlideOrder() {
@@ -1575,11 +1578,12 @@
 
     function applySlideOrder(keepCurrentSlideId = slideOrder[currentSlide]) {
       slideOrder.forEach((slideId) => {
-        deck.appendChild(slideElementsById.get(slideId));
+        const slideElement = slideElementsById.get(slideId);
+        if (slideElement) deck.appendChild(slideElement);
       });
-      slides = slideOrder.map((slideId) => slideElementsById.get(slideId));
+      slides = slideOrder.map((slideId) => slideElementsById.get(slideId)).filter(Boolean);
       const newCurrentIndex = slideOrder.indexOf(keepCurrentSlideId);
-      currentSlide = newCurrentIndex >= 0 ? newCurrentIndex : Math.min(currentSlide, slides.length - 1);
+      currentSlide = newCurrentIndex >= 0 ? newCurrentIndex : Math.max(0, Math.min(currentSlide, slides.length - 1));
       updateDeck();
     }
 
@@ -1747,7 +1751,7 @@
 
     function moveSlide(slideId, targetIndex) {
       const fromIndex = slideOrder.indexOf(slideId);
-      if (fromIndex < 0 || targetIndex < 0 || targetIndex >= slideOrder.length || fromIndex === targetIndex) {
+      if (fromIndex < 0 || targetIndex < 0 || targetIndex > slideOrder.length || fromIndex === targetIndex) {
         return;
       }
 
@@ -1841,15 +1845,23 @@
       }
     });
 
+    async function initializePresentations() {
+      editorStatus.textContent = 'Loading slideshows…';
+      presentations = await loadPresentations();
+      activePresentationId = loadActivePresentationId(presentations);
+      editorStatus.textContent = '';
+      rebuildPresentation();
+    }
+
     openEditorButton?.addEventListener('click', openEditor);
     newPresentationButton?.addEventListener('click', () => toggleCreatePresentationForm());
     addMenuButton?.addEventListener('click', () => toggleAddMenu());
     addMenuOptions.forEach((option) => {
       option.addEventListener('click', () => showToolPanel(option.dataset.tool));
     });
-    createPresentationForm?.addEventListener('submit', (event) => {
+    createPresentationForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
-      createPresentation(presentationNameInput.value);
+      await createPresentation(presentationNameInput.value);
       createPresentationForm.reset();
       toggleCreatePresentationForm(false);
     });
@@ -1906,7 +1918,7 @@
       addMediaForm.reset();
     });
 
-    rebuildPresentation();
+    initializePresentations();
   </script>
 </body>
 </html>

@@ -58,7 +58,18 @@ test('slide editor exists but is hidden until Edit is chosen', () => {
   assert.match(html, /function renderEditorCards\(/);
 });
 
-test('saved presentations are normalized so stale browser data cannot blank the library', () => {
+test('slideshow data is loaded and saved through the Cloudflare API, not browser storage', () => {
+  assert.match(html, /const PRESENTATION_API_URL = 'https:\/\/grow-presentation-api\.kenny-c8b\.workers\.dev\/api\/presentations'/);
+  assert.match(html, /async function apiRequest\(/);
+  assert.match(html, /async function loadPresentations\(/);
+  assert.match(html, /fetch\(PRESENTATION_API_URL \+ path/);
+  assert.match(html, /method:\s*'PUT'/);
+  assert.match(html, /method:\s*'DELETE'/);
+  assert.match(html, /duplicate/);
+  assert.doesNotMatch(html, /localStorage\.setItem|localStorage\.getItem|PRESENTATIONS_STORAGE_KEY|CUSTOM_SLIDES_STORAGE_KEY|ORDER_STORAGE_KEY|DELETED_SLIDES_STORAGE_KEY/);
+});
+
+test('saved presentations are normalized so stale API data cannot blank the library', () => {
   assert.match(html, /function normalizePresentationRecord\(/);
   assert.match(html, /Array\.isArray\(presentation\.deletedSlideIds\)/);
   assert.match(html, /Array\.isArray\(presentation\.customSlides\)/);
@@ -86,7 +97,7 @@ test('slides are draggable and dropped order is persisted in edit mode', () => {
   assert.match(html, /dragstart/);
   assert.match(html, /dragover/);
   assert.match(html, /drop/);
-  assert.match(html, /localStorage\.setItem\(ORDER_STORAGE_KEY/);
+  assert.match(html, /saveActivePresentation\(\)/);
 });
 
 test('editor can add slider-question and media slides from hidden panels', () => {
