@@ -84,11 +84,25 @@ test('slideshow data is loaded and saved through the Cloudflare API, not browser
   assert.match(html, /const PRESENTATION_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/presentations'/);
   assert.match(html, /async function apiRequest\(/);
   assert.match(html, /async function loadPresentations\(/);
-  assert.match(html, /fetch\(PRESENTATION_API_URL \+ path/);
+  assert.match(html, /return requestJson\(PRESENTATION_API_URL, path, options\)/);
   assert.match(html, /method:\s*'PUT'/);
   assert.match(html, /method:\s*'DELETE'/);
   assert.match(html, /duplicate/);
   assert.doesNotMatch(html, /localStorage\.setItem|localStorage\.getItem|PRESENTATIONS_STORAGE_KEY|CUSTOM_SLIDES_STORAGE_KEY|ORDER_STORAGE_KEY|DELETED_SLIDES_STORAGE_KEY/);
+});
+
+
+test('users must log in before presentations load and admins can invite users', () => {
+  assert.match(html, /const AUTH_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/auth'/);
+  assert.match(html, /id="loginPanel"/);
+  assert.match(html, /id="inviteUserButton"[\s\S]*>Invite User<\/button>/);
+  assert.match(html, /id="signOutButton"[\s\S]*>Sign Out<\/button>/);
+  assert.match(html, /async function requireSession\(/);
+  assert.match(html, /async function loginWithInviteToken\(/);
+  assert.match(html, /async function inviteUser\(/);
+  assert.match(html, /credentials:\s*'include'/);
+  assert.match(html, /return requestJson\(AUTH_API_URL, path, options\)/);
+  assert.match(html, /return requestJson\(PRESENTATION_API_URL, path, options\)/);
 });
 
 test('saved presentations are normalized so stale API data cannot blank the library', () => {

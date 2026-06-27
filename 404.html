@@ -316,6 +316,68 @@
       margin: 0 auto;
     }
 
+    .auth-panel {
+      width: min(560px, 100%);
+      margin: 16vh auto 0;
+      display: grid;
+      gap: 16px;
+      padding: 30px;
+      border: 1px solid rgba(226, 232, 240, 0.16);
+      border-radius: 24px;
+      background: rgba(15, 23, 42, 0.9);
+      box-shadow: 0 26px 80px rgba(0, 0, 0, 0.32);
+    }
+
+    .auth-panel[hidden],
+    .app-content[hidden] {
+      display: none;
+    }
+
+    .auth-panel h2 {
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
+      line-height: 1;
+      letter-spacing: -0.055em;
+    }
+
+    .auth-hint {
+      color: #cbd5e1;
+      font-weight: 700;
+    }
+
+    .auth-form {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .auth-form input {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid rgba(226, 232, 240, 0.18);
+      border-radius: 999px;
+      padding: 11px 14px;
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      font: inherit;
+      outline: none;
+    }
+
+    .auth-form input::placeholder {
+      color: #94a3b8;
+    }
+
+    .auth-form input:focus {
+      border-color: rgba(96, 165, 250, 0.64);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+    }
+
+    .auth-actions {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
     .editor-header {
       display: flex;
       gap: 18px;
@@ -995,10 +1057,24 @@
 
   <section class="presentation-editor" id="presentationEditor" aria-label="Grow Presentations" aria-hidden="false">
     <div class="editor-shell">
+      <section class="auth-panel" id="loginPanel" hidden aria-label="Login required">
+        <h2>Grow Presentations</h2>
+        <p class="auth-hint">Enter your invite code to access presentations.</p>
+        <form class="auth-form" id="loginForm">
+          <input id="inviteTokenInput" type="text" placeholder="Paste invite code" aria-label="Invite code" required />
+          <button class="tool-button" type="submit">Log In</button>
+        </form>
+        <p class="editor-status" id="loginStatus" aria-live="polite"></p>
+      </section>
+      <div class="app-content" id="appContent" hidden>
       <header class="editor-header library-header">
         <div class="editor-title-row">
           <h2 id="libraryTitle">Grow Presentations</h2>
-          <button class="tool-button" id="newPresentationButton" type="button" aria-expanded="false" aria-controls="createPresentationForm">New Slideshow</button>
+          <div class="auth-actions">
+            <button class="tool-button" id="newPresentationButton" type="button" aria-expanded="false" aria-controls="createPresentationForm">New Slideshow</button>
+            <button class="tool-button" id="inviteUserButton" type="button" hidden>Invite User</button>
+            <button class="editor-link" id="signOutButton" type="button" hidden>Sign Out</button>
+          </div>
         </div>
       </header>
       <p class="editor-status" id="editorStatus" aria-live="polite"></p>
@@ -1039,11 +1115,14 @@
         </div>
         <div class="editor-grid" id="editorGrid" aria-label="Slides in presentation order"></div>
       </section>
+      </div>
     </div>
   </section>
 
   <script>
     const PRESENTATION_API_URL = 'https://grow-api.kennygpt.org/api/presentations';
+    const AUTH_API_URL = 'https://grow-api.kennygpt.org/api/auth';
+    const INVITATIONS_API_URL = 'https://grow-api.kennygpt.org/api/invitations';
     const MANAGEMENT_HOST = 'walkthrough.growpage.org';
     const pdfSlides = [
       "page-003.webp", "page-004.webp", "page-005.webp",
@@ -1070,6 +1149,7 @@
     let customSlides = [];
     let deletedSlideIds = [];
     let slideDefinitions = [];
+    let currentUser = null;
 
     const deck = document.querySelector('#deck');
     const editor = document.querySelector('#presentationEditor');
@@ -1078,6 +1158,13 @@
     const editorWorkspace = document.querySelector('#editorWorkspace');
     const activePresentationTitle = document.querySelector('#activePresentationTitle');
     const presentationList = document.querySelector('#presentationList');
+    const appContent = document.querySelector('#appContent');
+    const loginPanel = document.querySelector('#loginPanel');
+    const loginForm = document.querySelector('#loginForm');
+    const inviteTokenInput = document.querySelector('#inviteTokenInput');
+    const loginStatus = document.querySelector('#loginStatus');
+    const inviteUserButton = document.querySelector('#inviteUserButton');
+    const signOutButton = document.querySelector('#signOutButton');
     const newPresentationButton = document.querySelector('#newPresentationButton');
     const createPresentationForm = document.querySelector('#createPresentationForm');
     const presentationNameInput = document.querySelector('#presentationNameInput');
@@ -1223,16 +1310,109 @@
       });
     }
 
-    async function apiRequest(path = '', options = {}) {
-      const response = await fetch(PRESENTATION_API_URL + path, {
+    async function requestJson(url, path = '', options = {}) {
+      const response = await fetch(url + path, {
         ...options,
+        credentials: 'include',
         headers: {
           'content-type': 'application/json',
           ...(options.headers || {})
         }
       });
-      if (!response.ok) throw new Error(`Presentation API returned ${response.status}`);
+      if (!response.ok) {
+        const error = new Error(`API returned ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
       return response.json();
+    }
+
+    async function authRequest(path = '', options = {}) {
+      return requestJson(AUTH_API_URL, path, options);
+    }
+
+    async function apiRequest(path = '', options = {}) {
+      return requestJson(PRESENTATION_API_URL, path, options);
+    }
+
+    async function requireSession() {
+      try {
+        const data = await authRequest('/session');
+        currentUser = data.user;
+        showAuthenticatedChrome();
+        return true;
+      } catch (error) {
+        currentUser = null;
+        showLoginPanel();
+        return false;
+      }
+    }
+
+    function showAuthenticatedChrome() {
+      loginPanel.hidden = true;
+      appContent.hidden = false;
+      inviteUserButton.hidden = currentUser?.role !== 'admin';
+      signOutButton.hidden = false;
+      if (loginStatus) loginStatus.textContent = '';
+    }
+
+    function showLoginPanel(message = '') {
+      document.body.classList.add('editor-open', 'library-mode');
+      editor.setAttribute('aria-hidden', 'false');
+      appContent.hidden = true;
+      loginPanel.hidden = false;
+      openEditorButton.hidden = true;
+      if (loginStatus) loginStatus.textContent = message;
+      inviteTokenInput?.focus();
+    }
+
+    function getInviteTokenFromUrl() {
+      return new URLSearchParams(window.location.search).get('invite') || '';
+    }
+
+    async function loginWithInviteToken(token) {
+      const trimmed = String(token || '').trim();
+      if (!trimmed) {
+        showLoginPanel('Paste an invite code to log in.');
+        return false;
+      }
+      try {
+        const data = await authRequest('/login', {
+          method: 'POST',
+          body: JSON.stringify({ token: trimmed })
+        });
+        currentUser = data.user;
+        const cleanPath = getRequestedPresentationId() ? window.location.pathname : '/';
+        history.replaceState(history.state, '', cleanPath);
+        showAuthenticatedChrome();
+        return true;
+      } catch (error) {
+        showLoginPanel('That invite link is invalid or expired.');
+        return false;
+      }
+    }
+
+    async function inviteUser() {
+      const email = window.prompt('Email address to invite');
+      if (!email) return;
+      try {
+        const data = await requestJson(INVITATIONS_API_URL, '', {
+          method: 'POST',
+          body: JSON.stringify({ email })
+        });
+        const inviteUrl = data.invitation.inviteUrl;
+        try { await navigator.clipboard.writeText(inviteUrl); } catch (error) {}
+        window.prompt('Copy this invite link', inviteUrl);
+      } catch (error) {
+        editorStatus.textContent = 'Could not create that invite.';
+      }
+    }
+
+    async function signOut() {
+      try { await authRequest('/logout', { method: 'POST' }); } catch (error) {}
+      currentUser = null;
+      presentations = [];
+      showLoginPanel('Signed out.');
     }
 
     async function loadPresentations() {
@@ -1246,6 +1426,10 @@
         }
         return presentationsToUse;
       } catch (error) {
+        if (error.status === 401) {
+          showLoginPanel();
+          return null;
+        }
         editorStatus.textContent = 'Could not reach the presentation server. Showing the default slideshows for now.';
         return createDefaultPresentations().map(normalizePresentationRecord);
       }
@@ -1902,8 +2086,16 @@
     });
 
     async function initializePresentations() {
+      const inviteToken = getInviteTokenFromUrl();
+      if (inviteToken) {
+        const loggedIn = await loginWithInviteToken(inviteToken);
+        if (!loggedIn) return;
+      } else if (!(await requireSession())) {
+        return;
+      }
       editorStatus.textContent = 'Loading slideshows…';
       presentations = await loadPresentations();
+      if (!presentations) return;
       activePresentationId = loadActivePresentationId(presentations);
       const requestedPresentationId = getRequestedPresentationId();
       editorStatus.textContent = '';
@@ -1925,6 +2117,12 @@
     });
 
     openEditorButton?.addEventListener('click', openEditor);
+    inviteUserButton?.addEventListener('click', inviteUser);
+    signOutButton?.addEventListener('click', signOut);
+    loginForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await loginWithInviteToken(inviteTokenInput.value);
+    });
     newPresentationButton?.addEventListener('click', () => toggleCreatePresentationForm());
     addMenuButton?.addEventListener('click', () => toggleAddMenu());
     addMenuOptions.forEach((option) => {
