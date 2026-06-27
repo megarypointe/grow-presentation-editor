@@ -92,17 +92,27 @@ test('slideshow data is loaded and saved through the Cloudflare API, not browser
 });
 
 
-test('users must log in before presentations load and admins can invite users', () => {
+test('users log in with email and password and can use forgot-password reset flow', () => {
   assert.match(html, /const AUTH_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/auth'/);
+  assert.match(html, /const USERS_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/users'/);
   assert.match(html, /id="loginPanel"/);
+  assert.match(html, /id="loginEmailInput"[^>]*type="email"/);
+  assert.match(html, /id="loginPasswordInput"[^>]*type="password"/);
+  assert.match(html, /id="forgotPasswordButton"[\s\S]*Forgot password\?/);
+  assert.match(html, /id="resetPasswordPanel"/);
+  assert.match(html, /id="resetPasswordInput"[^>]*type="password"/);
   assert.match(html, /id="inviteUserButton"[\s\S]*>Invite User<\/button>/);
   assert.match(html, /id="signOutButton"[\s\S]*>Sign Out<\/button>/);
   assert.match(html, /async function requireSession\(/);
-  assert.match(html, /async function loginWithInviteToken\(/);
+  assert.match(html, /async function loginWithPassword\(/);
+  assert.match(html, /async function requestPasswordReset\(/);
+  assert.match(html, /async function resetPassword\(/);
   assert.match(html, /async function inviteUser\(/);
+  assert.match(html, /temporaryPassword/);
   assert.match(html, /credentials:\s*'include'/);
   assert.match(html, /return requestJson\(AUTH_API_URL, path, options\)/);
   assert.match(html, /return requestJson\(PRESENTATION_API_URL, path, options\)/);
+  assert.doesNotMatch(html, /inviteTokenInput|loginWithInviteToken|Paste invite code|\?invite=/);
 });
 
 test('saved presentations are normalized so stale API data cannot blank the library', () => {

@@ -345,7 +345,7 @@
     }
 
     .auth-form {
-      display: flex;
+      display: grid;
       gap: 10px;
       align-items: center;
     }
@@ -1059,12 +1059,23 @@
     <div class="editor-shell">
       <section class="auth-panel" id="loginPanel" hidden aria-label="Login required">
         <h2>Grow Presentations</h2>
-        <p class="auth-hint">Enter your invite code to access presentations.</p>
+        <p class="auth-hint">Log in with your email and password.</p>
         <form class="auth-form" id="loginForm">
-          <input id="inviteTokenInput" type="text" placeholder="Paste invite code" aria-label="Invite code" required />
+          <input id="loginEmailInput" type="email" placeholder="Email" aria-label="Email" autocomplete="email" required />
+          <input id="loginPasswordInput" type="password" placeholder="Password" aria-label="Password" autocomplete="current-password" required />
           <button class="tool-button" type="submit">Log In</button>
         </form>
+        <button class="editor-link" id="forgotPasswordButton" type="button">Forgot password?</button>
         <p class="editor-status" id="loginStatus" aria-live="polite"></p>
+      </section>
+      <section class="auth-panel" id="resetPasswordPanel" hidden aria-label="Reset password">
+        <h2>Reset Password</h2>
+        <p class="auth-hint">Enter a new password for Grow Presentations.</p>
+        <form class="auth-form" id="resetPasswordForm">
+          <input id="resetPasswordInput" type="password" placeholder="New password" aria-label="New password" autocomplete="new-password" required />
+          <button class="tool-button" type="submit">Reset Password</button>
+        </form>
+        <p class="editor-status" id="resetPasswordStatus" aria-live="polite"></p>
       </section>
       <div class="app-content" id="appContent" hidden>
       <header class="editor-header library-header">
@@ -1122,7 +1133,7 @@
   <script>
     const PRESENTATION_API_URL = 'https://grow-api.kennygpt.org/api/presentations';
     const AUTH_API_URL = 'https://grow-api.kennygpt.org/api/auth';
-    const INVITATIONS_API_URL = 'https://grow-api.kennygpt.org/api/invitations';
+    const USERS_API_URL = 'https://grow-api.kennygpt.org/api/users';
     const MANAGEMENT_HOST = 'walkthrough.growpage.org';
     const pdfSlides = [
       "page-003.webp", "page-004.webp", "page-005.webp",
@@ -1160,8 +1171,14 @@
     const presentationList = document.querySelector('#presentationList');
     const appContent = document.querySelector('#appContent');
     const loginPanel = document.querySelector('#loginPanel');
+    const resetPasswordPanel = document.querySelector('#resetPasswordPanel');
     const loginForm = document.querySelector('#loginForm');
-    const inviteTokenInput = document.querySelector('#inviteTokenInput');
+    const loginEmailInput = document.querySelector('#loginEmailInput');
+    const loginPasswordInput = document.querySelector('#loginPasswordInput');
+    const forgotPasswordButton = document.querySelector('#forgotPasswordButton');
+    const resetPasswordForm = document.querySelector('#resetPasswordForm');
+    const resetPasswordInput = document.querySelector('#resetPasswordInput');
+    const resetPasswordStatus = document.querySelector('#resetPasswordStatus');
     const loginStatus = document.querySelector('#loginStatus');
     const inviteUserButton = document.querySelector('#inviteUserButton');
     const signOutButton = document.querySelector('#signOutButton');
@@ -1350,6 +1367,7 @@
 
     function showAuthenticatedChrome() {
       loginPanel.hidden = true;
+      resetPasswordPanel.hidden = true;
       appContent.hidden = false;
       inviteUserButton.hidden = currentUser?.role !== 'admin';
       signOutButton.hidden = false;
@@ -1360,35 +1378,72 @@
       document.body.classList.add('editor-open', 'library-mode');
       editor.setAttribute('aria-hidden', 'false');
       appContent.hidden = true;
+      resetPasswordPanel.hidden = true;
       loginPanel.hidden = false;
       openEditorButton.hidden = true;
       if (loginStatus) loginStatus.textContent = message;
-      inviteTokenInput?.focus();
+      loginEmailInput?.focus();
     }
 
-    function getInviteTokenFromUrl() {
-      return new URLSearchParams(window.location.search).get('invite') || '';
+    function showResetPasswordPanel(message = '') {
+      document.body.classList.add('editor-open', 'library-mode');
+      editor.setAttribute('aria-hidden', 'false');
+      appContent.hidden = true;
+      loginPanel.hidden = true;
+      resetPasswordPanel.hidden = false;
+      openEditorButton.hidden = true;
+      if (resetPasswordStatus) resetPasswordStatus.textContent = message;
+      resetPasswordInput?.focus();
     }
 
-    async function loginWithInviteToken(token) {
-      const trimmed = String(token || '').trim();
-      if (!trimmed) {
-        showLoginPanel('Paste an invite code to log in.');
-        return false;
-      }
+    function getResetTokenFromUrl() {
+      return new URLSearchParams(window.location.search).get('reset') || '';
+    }
+
+    async function loginWithPassword(email, password) {
       try {
         const data = await authRequest('/login', {
           method: 'POST',
-          body: JSON.stringify({ token: trimmed })
+          body: JSON.stringify({ email, password })
         });
         currentUser = data.user;
-        const cleanPath = getRequestedPresentationId() ? window.location.pathname : '/';
-        history.replaceState(history.state, '', cleanPath);
         showAuthenticatedChrome();
         return true;
       } catch (error) {
-        showLoginPanel('That invite link is invalid or expired.');
+        showLoginPanel('Invalid email or password.');
         return false;
+      }
+    }
+
+    async function requestPasswordReset(email) {
+      const trimmed = String(email || '').trim();
+      if (!trimmed) {
+        showLoginPanel('Enter your email first, then choose Forgot password.');
+        return;
+      }
+      try {
+        await authRequest('/request-password-reset', {
+          method: 'POST',
+          body: JSON.stringify({ email: trimmed })
+        });
+        showLoginPanel('If that account exists, a reset link has been sent.');
+      } catch (error) {
+        showLoginPanel('Could not start password reset. Try again in a moment.');
+      }
+    }
+
+    async function resetPassword(token, password) {
+      try {
+        const data = await authRequest('/reset-password', {
+          method: 'POST',
+          body: JSON.stringify({ token, password })
+        });
+        currentUser = data.user;
+        history.replaceState(history.state, '', '/');
+        showAuthenticatedChrome();
+        await initializePresentations();
+      } catch (error) {
+        showResetPasswordPanel(error.status === 400 ? 'Password must be at least 10 characters.' : 'That reset link is invalid or expired.');
       }
     }
 
@@ -1396,15 +1451,15 @@
       const email = window.prompt('Email address to invite');
       if (!email) return;
       try {
-        const data = await requestJson(INVITATIONS_API_URL, '', {
+        const data = await requestJson(USERS_API_URL, '', {
           method: 'POST',
           body: JSON.stringify({ email })
         });
-        const inviteUrl = data.invitation.inviteUrl;
-        try { await navigator.clipboard.writeText(inviteUrl); } catch (error) {}
-        window.prompt('Copy this invite link', inviteUrl);
+        const temporaryPassword = data.temporaryPassword;
+        try { await navigator.clipboard.writeText(temporaryPassword); } catch (error) {}
+        window.prompt(`Temporary password for ${data.user.email}. Share it securely; they'll be asked to reset it.`, temporaryPassword);
       } catch (error) {
-        editorStatus.textContent = 'Could not create that invite.';
+        editorStatus.textContent = 'Could not create that user.';
       }
     }
 
@@ -2086,11 +2141,12 @@
     });
 
     async function initializePresentations() {
-      const inviteToken = getInviteTokenFromUrl();
-      if (inviteToken) {
-        const loggedIn = await loginWithInviteToken(inviteToken);
-        if (!loggedIn) return;
-      } else if (!(await requireSession())) {
+      const resetToken = getResetTokenFromUrl();
+      if (resetToken && !currentUser) {
+        showResetPasswordPanel();
+        return;
+      }
+      if (!currentUser && !(await requireSession())) {
         return;
       }
       editorStatus.textContent = 'Loading slideshows…';
@@ -2121,7 +2177,13 @@
     signOutButton?.addEventListener('click', signOut);
     loginForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
-      await loginWithInviteToken(inviteTokenInput.value);
+      const loggedIn = await loginWithPassword(loginEmailInput.value, loginPasswordInput.value);
+      if (loggedIn) await initializePresentations();
+    });
+    forgotPasswordButton?.addEventListener('click', () => requestPasswordReset(loginEmailInput.value));
+    resetPasswordForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await resetPassword(getResetTokenFromUrl(), resetPasswordInput.value);
     });
     newPresentationButton?.addEventListener('click', () => toggleCreatePresentationForm());
     addMenuButton?.addEventListener('click', () => toggleAddMenu());
