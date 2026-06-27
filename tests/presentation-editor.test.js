@@ -29,9 +29,9 @@ test('each slideshow renders as one compact thumbnail box with a three-dot menu'
   assert.match(html, /class="slideshow-card/);
   assert.match(html, /class="slideshow-card-main"/);
   assert.match(html, /class="slideshow-thumbnail"/);
-  assert.match(html, /grid-template-columns:\s*repeat\(auto-fit, minmax\(150px, 180px\)\)/);
+  assert.match(html, /grid-template-columns:\s*repeat\(auto-fit, minmax\(180px, 220px\)\)/);
   assert.match(html, /\.slideshow-card-main\s*{[\s\S]*?gap:\s*8px/);
-  assert.match(html, /\.slideshow-title\s*{[\s\S]*?font-size:\s*0\.88rem/);
+  assert.match(html, /\.slideshow-title\s*{[\s\S]*?font-size:\s*0\.95rem/);
   assert.match(html, /function getPresentationThumbnail\(/);
   assert.match(html, /assets\/slides\/\$\{thumbnail\.file\}/);
   assert.match(html, /object-fit:\s*contain/);
@@ -39,6 +39,7 @@ test('each slideshow renders as one compact thumbnail box with a three-dot menu'
   assert.match(html, /class="slideshow-menu-button"[\s\S]*aria-label="Slideshow options"/);
   assert.match(html, /class="slideshow-menu"/);
   assert.match(html, /data-presentation-action="edit"[\s\S]*Edit/);
+  assert.match(html, /data-presentation-action="rename"[\s\S]*Rename/);
   assert.match(html, /data-presentation-action="duplicate"[\s\S]*Duplicate/);
   assert.match(html, /data-presentation-action="delete"[\s\S]*Delete/);
 });
@@ -47,6 +48,8 @@ test('clicking a slideshow presents it and menu actions manage it', () => {
   assert.match(html, /data-presentation-action="present"/);
   assert.match(html, /function presentPresentation\(/);
   assert.match(html, /function editPresentation\(/);
+  assert.match(html, /function renamePresentation\(/);
+  assert.match(html, /window\.prompt\('Rename slideshow'/);
   assert.match(html, /function duplicatePresentation\(/);
   assert.match(html, /function deletePresentation\(/);
   assert.match(html, /function togglePresentationMenu\(/);

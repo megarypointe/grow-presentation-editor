@@ -462,7 +462,7 @@
 
     .slideshow-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 180px));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
       gap: 14px;
       align-items: start;
     }
@@ -518,7 +518,7 @@
     .slideshow-title {
       min-height: 1.4em;
       padding: 0 2px 2px;
-      font-size: 0.88rem;
+      font-size: 0.95rem;
       font-weight: 850;
       letter-spacing: -0.02em;
     }
@@ -634,7 +634,7 @@
 
     .presentation-list {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 180px));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
       gap: 14px;
     }
 
@@ -1372,6 +1372,7 @@
             <button class="slideshow-menu-button" type="button" aria-label="Slideshow options" aria-expanded="false">⋯</button>
             <div class="slideshow-menu" hidden>
               <button type="button" data-presentation-action="edit" data-presentation-id="${escapeAttribute(presentation.id)}">Edit</button>
+              <button type="button" data-presentation-action="rename" data-presentation-id="${escapeAttribute(presentation.id)}">Rename</button>
               <button type="button" data-presentation-action="duplicate" data-presentation-id="${escapeAttribute(presentation.id)}">Duplicate</button>
               <button type="button" data-presentation-action="delete" data-presentation-id="${escapeAttribute(presentation.id)}">Delete</button>
             </div>
@@ -1389,6 +1390,9 @@
       });
       presentationList.querySelectorAll('[data-presentation-action="edit"]').forEach((button) => {
         button.addEventListener('click', () => editPresentation(button.dataset.presentationId));
+      });
+      presentationList.querySelectorAll('[data-presentation-action="rename"]').forEach((button) => {
+        button.addEventListener('click', () => renamePresentation(button.dataset.presentationId));
       });
       presentationList.querySelectorAll('[data-presentation-action="duplicate"]').forEach((button) => {
         button.addEventListener('click', () => duplicatePresentation(button.dataset.presentationId));
@@ -1441,6 +1445,29 @@
       document.body.classList.remove('library-mode');
       document.body.classList.add('editing-slideshow');
       editorWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function renamePresentation(presentationId) {
+      const presentation = presentations.find((item) => item.id === presentationId);
+      if (!presentation) return;
+      const nextTitle = window.prompt('Rename slideshow', presentation.title);
+      if (nextTitle === null) return;
+      const title = nextTitle.trim();
+      if (!title || title === presentation.title) return;
+      try {
+        const data = await apiRequest(`/${encodeURIComponent(presentationId)}`, {
+          method: 'PUT',
+          body: JSON.stringify({ ...presentation, title })
+        });
+        const saved = normalizePresentationRecord(data.presentation);
+        const index = presentations.findIndex((item) => item.id === saved.id);
+        if (index >= 0) presentations[index] = saved;
+        if (activePresentationId === saved.id) activePresentation = saved;
+        updateActivePresentationTitle();
+        renderPresentationManager();
+      } catch (error) {
+        editorStatus.textContent = 'Could not rename that slideshow on the server.';
+      }
     }
 
     async function duplicatePresentation(presentationId) {
