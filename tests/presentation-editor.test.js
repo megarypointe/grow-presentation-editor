@@ -59,8 +59,10 @@ test('clicking a slideshow presents it and menu actions manage it', () => {
   assert.match(html, /function togglePresentationMenu\(/);
 });
 
-test('slide editor exists but is hidden until Edit is chosen', () => {
+test('slide editor exists but is hidden until Edit is chosen, then replaces the slideshow library', () => {
   assert.match(html, /id="editorWorkspace"[^>]*hidden/);
+  assert.match(html, /function editPresentation\(presentationId\) \{[\s\S]*?presentationManager\.hidden = true;[\s\S]*?createPresentationForm\.hidden = true;[\s\S]*?teamPage\.hidden = true;[\s\S]*?editorWorkspace\.hidden = false;/);
+  assert.match(html, /function showPresentationsPage\(\) \{[\s\S]*?presentationManager\.hidden = false;[\s\S]*?editorWorkspace\.hidden = true;/);
   assert.match(html, /id="addMenuButton"/);
   assert.match(html, /id="editorGrid"/);
   assert.match(html, /id="addSliderForm"/);

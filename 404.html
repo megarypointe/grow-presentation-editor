@@ -1922,6 +1922,9 @@
 
     function editPresentation(presentationId) {
       selectPresentation(presentationId);
+      presentationManager.hidden = true;
+      createPresentationForm.hidden = true;
+      teamPage.hidden = true;
       editorWorkspace.hidden = false;
       document.body.classList.remove('library-mode');
       document.body.classList.add('editing-slideshow');
