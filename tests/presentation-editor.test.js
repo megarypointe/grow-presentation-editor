@@ -58,6 +58,15 @@ test('slide editor exists but is hidden until Edit is chosen', () => {
   assert.match(html, /function renderEditorCards\(/);
 });
 
+test('saved presentations are normalized so stale browser data cannot blank the library', () => {
+  assert.match(html, /function normalizePresentationRecord\(/);
+  assert.match(html, /Array\.isArray\(presentation\.deletedSlideIds\)/);
+  assert.match(html, /Array\.isArray\(presentation\.customSlides\)/);
+  assert.match(html, /Array\.isArray\(presentation\.slideOrder\)/);
+  assert.match(html, /\.map\(normalizePresentationRecord\)/);
+  assert.match(html, /createDefaultPresentations\(\)\.map\(normalizePresentationRecord\)/);
+});
+
 test('presentation-specific slide edits are isolated by active presentation', () => {
   assert.match(html, /activePresentation\.customSlides/);
   assert.match(html, /activePresentation\.deletedSlideIds/);

@@ -1246,10 +1246,19 @@
       ];
     }
 
+    function normalizePresentationRecord(presentation) {
+      return createPresentationRecord(presentation.id, presentation.title, {
+        customSlides: Array.isArray(presentation.customSlides) ? presentation.customSlides : [],
+        deletedSlideIds: Array.isArray(presentation.deletedSlideIds) ? presentation.deletedSlideIds : [],
+        slideOrder: Array.isArray(presentation.slideOrder) ? presentation.slideOrder : baseSlideDefinitions.map((slide) => slide.id)
+      });
+    }
+
     function loadPresentations() {
       const savedPresentations = readStorageArray(PRESENTATIONS_STORAGE_KEY)
-        .filter((presentation) => presentation && presentation.id && presentation.title);
-      const presentationsToUse = savedPresentations.length ? savedPresentations : createDefaultPresentations();
+        .filter((presentation) => presentation && presentation.id && presentation.title)
+        .map(normalizePresentationRecord);
+      const presentationsToUse = savedPresentations.length ? savedPresentations : createDefaultPresentations().map(normalizePresentationRecord);
       if (!presentationsToUse.some((presentation) => presentation.id === 'second-presentation')) {
         presentationsToUse.push(createPresentationRecord('second-presentation', 'Second Presentation'));
       }
@@ -1307,12 +1316,13 @@
     }
 
     function getPresentationThumbnail(presentation) {
+      const removedSlideIds = Array.isArray(presentation.deletedSlideIds) ? presentation.deletedSlideIds : [];
       const presentationSlides = [
         ...baseSlideDefinitions,
         ...(Array.isArray(presentation.customSlides) ? presentation.customSlides : [])
-      ].filter((slide) => !(presentation.deletedSlideIds || []).includes(slide.id));
+      ].filter((slide) => !removedSlideIds.includes(slide.id));
       const availableIds = presentationSlides.map((slide) => slide.id);
-      const firstSlideId = normalizeSlideOrder(presentation.slideOrder, availableIds)[0];
+      const firstSlideId = normalizeSlideOrder(Array.isArray(presentation.slideOrder) ? presentation.slideOrder : [], availableIds)[0];
       return presentationSlides.find((slide) => slide.id === firstSlideId) || presentationSlides[0];
     }
 
