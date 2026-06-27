@@ -1134,6 +1134,7 @@
     const PRESENTATION_API_URL = 'https://grow-api.kennygpt.org/api/presentations';
     const AUTH_API_URL = 'https://grow-api.kennygpt.org/api/auth';
     const USERS_API_URL = 'https://grow-api.kennygpt.org/api/users';
+    const AUTH_TOKEN_STORAGE_KEY = 'growPresentationAuthToken';
     const MANAGEMENT_HOST = 'walkthrough.growpage.org';
     const pdfSlides = [
       "page-003.webp", "page-004.webp", "page-005.webp",
@@ -1161,6 +1162,7 @@
     let deletedSlideIds = [];
     let slideDefinitions = [];
     let currentUser = null;
+    let authToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || '';
 
     const deck = document.querySelector('#deck');
     const editor = document.querySelector('#presentationEditor');
@@ -1333,6 +1335,7 @@
         credentials: 'include',
         headers: {
           'content-type': 'application/json',
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
           ...(options.headers || {})
         }
       });
@@ -1350,6 +1353,16 @@
 
     async function apiRequest(path = '', options = {}) {
       return requestJson(PRESENTATION_API_URL, path, options);
+    }
+
+    function storeAuthToken(sessionToken = '') {
+      authToken = sessionToken || '';
+      if (authToken) localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, authToken);
+    }
+
+    function clearAuthToken() {
+      authToken = '';
+      localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
     }
 
     async function requireSession() {
@@ -1411,6 +1424,7 @@
           method: 'POST',
           body: JSON.stringify({ email, password })
         });
+        storeAuthToken(data.sessionToken);
         currentUser = data.user;
         showAuthenticatedChrome();
         return true;
@@ -1443,6 +1457,7 @@
           method: 'POST',
           body: JSON.stringify({ token, password })
         });
+        storeAuthToken(data.sessionToken);
         currentUser = data.user;
         history.replaceState(history.state, '', '/');
         showAuthenticatedChrome();
@@ -1470,6 +1485,7 @@
 
     async function signOut() {
       try { await authRequest('/logout', { method: 'POST' }); } catch (error) {}
+      clearAuthToken();
       currentUser = null;
       presentations = [];
       showLoginPanel('Signed out.');

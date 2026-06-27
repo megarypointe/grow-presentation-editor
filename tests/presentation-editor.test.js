@@ -88,13 +88,14 @@ test('slideshow data is loaded and saved through the Cloudflare API, not browser
   assert.match(html, /method:\s*'PUT'/);
   assert.match(html, /method:\s*'DELETE'/);
   assert.match(html, /duplicate/);
-  assert.doesNotMatch(html, /localStorage\.setItem|localStorage\.getItem|PRESENTATIONS_STORAGE_KEY|CUSTOM_SLIDES_STORAGE_KEY|ORDER_STORAGE_KEY|DELETED_SLIDES_STORAGE_KEY/);
+  assert.doesNotMatch(html, /PRESENTATIONS_STORAGE_KEY|CUSTOM_SLIDES_STORAGE_KEY|ORDER_STORAGE_KEY|DELETED_SLIDES_STORAGE_KEY/);
 });
 
 
 test('users log in with email and password and can use forgot-password reset flow', () => {
   assert.match(html, /const AUTH_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/auth'/);
   assert.match(html, /const USERS_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/users'/);
+  assert.match(html, /const AUTH_TOKEN_STORAGE_KEY = 'growPresentationAuthToken'/);
   assert.match(html, /id="loginPanel"/);
   assert.match(html, /id="loginEmailInput"[^>]*type="email"/);
   assert.match(html, /id="loginPasswordInput"[^>]*type="password"/);
@@ -110,6 +111,9 @@ test('users log in with email and password and can use forgot-password reset flo
   assert.match(html, /async function inviteUser\(/);
   assert.match(html, /temporaryPassword/);
   assert.match(html, /credentials:\s*'include'/);
+  assert.match(html, /Authorization': `Bearer \$\{authToken\}`/);
+  assert.match(html, /localStorage\.setItem\(AUTH_TOKEN_STORAGE_KEY/);
+  assert.match(html, /localStorage\.removeItem\(AUTH_TOKEN_STORAGE_KEY\)/);
   assert.match(html, /return requestJson\(AUTH_API_URL, path, options\)/);
   assert.match(html, /return requestJson\(PRESENTATION_API_URL, path, options\)/);
   assert.doesNotMatch(html, /inviteTokenInput|loginWithInviteToken|Paste invite code|\?invite=/);
