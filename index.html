@@ -278,7 +278,8 @@
       outline-offset: 2px;
     }
 
-    .editor-link {
+    .editor-link,
+    .editor-home-link {
       border: 0;
       border-radius: 999px;
       padding: 7px 11px;
@@ -292,8 +293,15 @@
       box-shadow: none;
     }
 
+    .editor-home-link {
+      color: #93c5fd;
+      background: rgba(96, 165, 250, 0.12);
+    }
+
     .editor-link:hover,
-    .editor-link:focus-visible {
+    .editor-link:focus-visible,
+    .editor-home-link:hover,
+    .editor-home-link:focus-visible {
       background: rgba(255, 255, 255, 0.14);
       color: white;
       outline: 2px solid rgba(96, 165, 250, 0.45);
@@ -1221,7 +1229,7 @@
         <p class="editor-status" id="resetPasswordStatus" aria-live="polite"></p>
       </section>
       <div class="app-content" id="appContent" hidden>
-      <header class="editor-header library-header">
+      <header class="editor-header library-header" id="libraryHeader">
         <div class="editor-title-row">
           <a class="library-title-link" id="libraryTitleLink" href="/" aria-label="Back to Grow Presentations">
             <h2 id="libraryTitle">Grow Presentations</h2>
@@ -1259,6 +1267,7 @@
       <section id="editorWorkspace" hidden>
         <header class="editor-header edit-header">
           <div class="editor-title-row">
+            <a class="editor-home-link" id="editorHomeLink" href="/" aria-label="Back to Grow Presentations">Grow Presentations</a>
             <h2 id="activePresentationTitle">Grow Presentation</h2>
             <button id="addMenuButton" class="add-menu-button" type="button" aria-label="Add slide to active presentation" aria-expanded="false" aria-controls="addMenu"><span aria-hidden="true">+</span> Add Slide</button>
             <div class="add-menu" id="addMenu" hidden>
@@ -1330,7 +1339,9 @@
     const editorStatus = document.querySelector('#editorStatus');
     const editorWorkspace = document.querySelector('#editorWorkspace');
     const activePresentationTitle = document.querySelector('#activePresentationTitle');
+    const libraryHeader = document.querySelector('#libraryHeader');
     const libraryTitleLink = document.querySelector('#libraryTitleLink');
+    const editorHomeLink = document.querySelector('#editorHomeLink');
     const presentationList = document.querySelector('#presentationList');
     const presentationManager = document.querySelector('#presentationManager');
     const appContent = document.querySelector('#appContent');
@@ -1660,6 +1671,7 @@
     async function showTeamPage() {
       if (!isOwnerUser(currentUser)) return;
       toggleAccountMenu(false);
+      libraryHeader.hidden = true;
       presentationManager.hidden = true;
       createPresentationForm.hidden = true;
       editorWorkspace.hidden = true;
@@ -1673,6 +1685,7 @@
     }
 
     function showPresentationsPage() {
+      libraryHeader.hidden = false;
       teamPage.hidden = true;
       presentationManager.hidden = false;
       editorWorkspace.hidden = true;
@@ -1900,6 +1913,7 @@
       document.body.classList.add('editor-open', 'library-mode');
       document.body.classList.remove('editing-slideshow');
       editor.setAttribute('aria-hidden', 'false');
+      libraryHeader.hidden = false;
       teamPage.hidden = true;
       presentationManager.hidden = false;
       editorWorkspace.hidden = true;
@@ -1922,6 +1936,7 @@
 
     function editPresentation(presentationId) {
       selectPresentation(presentationId);
+      libraryHeader.hidden = true;
       presentationManager.hidden = true;
       createPresentationForm.hidden = true;
       teamPage.hidden = true;
@@ -2424,6 +2439,10 @@
     signOutButton?.addEventListener('click', signOut);
     backToPresentationsButton?.addEventListener('click', showPresentationsPage);
     libraryTitleLink?.addEventListener('click', (event) => {
+      event.preventDefault();
+      navigateToPresentationsHome();
+    });
+    editorHomeLink?.addEventListener('click', (event) => {
       event.preventDefault();
       navigateToPresentationsHome();
     });
