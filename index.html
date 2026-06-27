@@ -379,6 +379,21 @@
       position: relative;
     }
 
+    .library-title-link {
+      display: inline-flex;
+      color: inherit;
+      text-decoration: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .library-title-link:hover,
+    .library-title-link:focus-visible {
+      color: white;
+      outline: 2px solid rgba(96, 165, 250, 0.45);
+      outline-offset: 4px;
+    }
+
     .account-menu-button {
       width: 40px;
       height: 40px;
@@ -1204,7 +1219,9 @@
       <div class="app-content" id="appContent" hidden>
       <header class="editor-header library-header">
         <div class="editor-title-row">
-          <h2 id="libraryTitle">Grow Presentations</h2>
+          <a class="library-title-link" id="libraryTitleLink" href="/" aria-label="Back to Grow Presentations">
+            <h2 id="libraryTitle">Grow Presentations</h2>
+          </a>
           <div class="auth-actions">
             <button class="tool-button" id="newPresentationButton" type="button" aria-expanded="false" aria-controls="createPresentationForm">New Slideshow</button>
             <button class="account-menu-button" id="accountMenuButton" type="button" aria-label="Account menu" aria-expanded="false" aria-controls="accountMenu">☰</button>
@@ -1309,6 +1326,7 @@
     const editorStatus = document.querySelector('#editorStatus');
     const editorWorkspace = document.querySelector('#editorWorkspace');
     const activePresentationTitle = document.querySelector('#activePresentationTitle');
+    const libraryTitleLink = document.querySelector('#libraryTitleLink');
     const presentationList = document.querySelector('#presentationList');
     const presentationManager = document.querySelector('#presentationManager');
     const appContent = document.querySelector('#appContent');
@@ -1654,6 +1672,12 @@
       teamPage.hidden = true;
       presentationManager.hidden = false;
       editorWorkspace.hidden = true;
+      renderPresentationManager();
+    }
+
+    function navigateToPresentationsHome() {
+      history.pushState({}, '', '/');
+      showManagementPage();
       renderPresentationManager();
     }
 
@@ -2392,6 +2416,10 @@
     teamMenuButton?.addEventListener('click', showTeamPage);
     signOutButton?.addEventListener('click', signOut);
     backToPresentationsButton?.addEventListener('click', showPresentationsPage);
+    libraryTitleLink?.addEventListener('click', (event) => {
+      event.preventDefault();
+      navigateToPresentationsHome();
+    });
     inviteUserForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
       await inviteUser(inviteUserEmailInput.value);
