@@ -2,6 +2,6 @@
 
 Standalone GitHub Pages editor for reordering the Grow presentation slides.
 
-Live URL: https://megarypointe.github.io/grow-presentation-editor/
+Live URL: https://grow.kennygpt.org/
 
-The editor saves slide order in browser localStorage on `https://megarypointe.github.io`, which is shared with the live presentation page.
+The editor loads and saves slideshow data through the Cloudflare Worker API at `https://api.grow.kennygpt.org/api/presentations`.

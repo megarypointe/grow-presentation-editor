@@ -59,7 +59,7 @@ test('slide editor exists but is hidden until Edit is chosen', () => {
 });
 
 test('slideshow data is loaded and saved through the Cloudflare API, not browser storage', () => {
-  assert.match(html, /const PRESENTATION_API_URL = 'https:\/\/grow-presentation-api\.kenny-c8b\.workers\.dev\/api\/presentations'/);
+  assert.match(html, /const PRESENTATION_API_URL = 'https:\/\/api\.grow\.kennygpt\.org\/api\/presentations'/);
   assert.match(html, /async function apiRequest\(/);
   assert.match(html, /async function loadPresentations\(/);
   assert.match(html, /fetch\(PRESENTATION_API_URL \+ path/);
