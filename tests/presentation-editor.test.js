@@ -38,6 +38,7 @@ test('each slideshow renders as one compact thumbnail box with a three-dot menu'
   assert.match(html, /loading=\"eager\"/);
   assert.match(html, /class="slideshow-menu-button"[\s\S]*aria-label="Slideshow options"/);
   assert.match(html, /class="slideshow-menu"/);
+  assert.match(html, /\.slideshow-card\s*{[\s\S]*?overflow:\s*visible/);
   assert.match(html, /data-presentation-action="edit"[\s\S]*Edit/);
   assert.match(html, /data-presentation-action="rename"[\s\S]*Rename/);
   assert.match(html, /data-presentation-action="duplicate"[\s\S]*Duplicate/);

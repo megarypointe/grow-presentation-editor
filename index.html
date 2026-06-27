@@ -471,7 +471,7 @@
       position: relative;
       border: 1px solid rgba(226, 232, 240, 0.16);
       border-radius: 18px;
-      overflow: hidden;
+      overflow: visible;
       background: rgba(15, 23, 42, 0.78);
       box-shadow: 0 16px 42px rgba(0, 0, 0, 0.24);
     }
@@ -543,8 +543,8 @@
     .slideshow-menu {
       position: absolute;
       z-index: 40;
-      top: 52px;
-      right: 14px;
+      top: calc(100% + 8px);
+      right: 0;
       min-width: 132px;
       display: grid;
       gap: 4px;
