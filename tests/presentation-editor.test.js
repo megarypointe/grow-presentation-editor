@@ -60,7 +60,7 @@ test('clicking a slideshow presents it and menu actions manage it', () => {
 });
 
 test('slide editor is a separate page and does not show library buttons or menus', () => {
-  assert.match(html, /id="libraryHeader"/);
+  assert.match(html, /\.library-header\[hidden\]\s*\{[\s\S]*?display:\s*none/);
   assert.match(html, /id="editorWorkspace"[^>]*hidden/);
   assert.match(html, /id="editorHomeLink" href="\/"[\s\S]*Grow Presentations/);
   assert.match(html, /editorHomeLink\?\.addEventListener\('click'/);
