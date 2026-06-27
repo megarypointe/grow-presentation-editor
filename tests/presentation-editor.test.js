@@ -65,6 +65,8 @@ test('slide editor is a separate page and does not show library buttons or menus
   assert.match(html, /id="editorHomeLink" href="\/"[\s\S]*Grow Presentations/);
   assert.match(html, /editorHomeLink\?\.addEventListener\('click'/);
   assert.match(html, /function editPresentation\(presentationId\) \{[\s\S]*?libraryHeader\.hidden = true;[\s\S]*?presentationManager\.hidden = true;[\s\S]*?createPresentationForm\.hidden = true;[\s\S]*?teamPage\.hidden = true;[\s\S]*?editorWorkspace\.hidden = false;/);
+  assert.match(html, /body\.editing-slideshow \.editor-status\s*\{[\s\S]*?display:\s*none/);
+  assert.match(html, /body\.editing-slideshow #editorWorkspace\s*\{[\s\S]*?margin-top:\s*0/);
   assert.match(html, /function showPresentationsPage\(\) \{[\s\S]*?libraryHeader\.hidden = false;[\s\S]*?presentationManager\.hidden = false;[\s\S]*?editorWorkspace\.hidden = true;/);
   assert.match(html, /id="addMenuButton"/);
   assert.match(html, /id="editorGrid"/);
