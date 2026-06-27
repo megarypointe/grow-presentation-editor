@@ -15,8 +15,8 @@ test('page asks browsers not to reuse stale editor HTML', () => {
 
 test('slideshow library is a minimal boxes-only landing page', () => {
   assert.match(html, /<body class="editor-open library-mode">/);
-  assert.match(html, /<a class="library-title-link" id="libraryTitleLink" href="\/" aria-label="Back to Grow Presentations">\s*<h2 id="libraryTitle">Grow Presentations<\/h2>\s*<\/a>/);
-  assert.match(html, /libraryTitleLink\?\.addEventListener\('click'/);
+  assert.match(html, /<a class="library-title-link" id="libraryTitleLink" href="\/" aria-label="Back to Grow Presentations">\s*<h2 id="libraryTitle">Grow Presentations<\/h2>\s*<\/a>\s*<button class="tool-button" id="newPresentationButton"[\s\S]*>New Slideshow<\/button>\s*<div class="auth-actions">/);
+  assert.match(html, /\.library-header \.auth-actions\s*{[\s\S]*?margin-left:\s*auto/);
   assert.match(html, /function navigateToPresentationsHome\(/);
   assert.match(html, /history\.pushState\(\{\}, '', '\/'\)/);
   assert.match(html, /id="newPresentationButton"[\s\S]*>New Slideshow<\/button>/);
