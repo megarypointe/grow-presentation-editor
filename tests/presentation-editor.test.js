@@ -52,6 +52,7 @@ test('clicking a slideshow presents it and menu actions manage it', () => {
   assert.match(html, /data-presentation-action="present"/);
   assert.match(html, /function presentPresentation\(/);
   assert.match(html, /function editPresentation\(/);
+  assert.match(html, /function closeEditor\(\) \{[\s\S]*?openEditorButton\.hidden = true;/);
   assert.match(html, /function renamePresentation\(/);
   assert.match(html, /window\.prompt\('Rename slideshow'/);
   assert.match(html, /function duplicatePresentation\(/);
@@ -191,6 +192,7 @@ test('editor can add slider-question, button-choice, and media slides from hidde
   assert.match(html, /kind:\s*'custom-buttons'/);
   assert.match(html, /button-choice-grid/);
   assert.match(html, /aria-pressed/);
+  assert.match(html, /\.slider-slide main,\s*\.buttons-slide main/);
   assert.match(html, /definition\.choices/);
   assert.match(html, /if \(thumbnail\.kind === 'custom-buttons'\) return `<div class="slide-card-question">\$\{escapeAttribute\(thumbnail\.question\)\}<\/div>`;/);
   assert.match(html, /definition\.kind === 'custom-slider' \|\| definition\.kind === 'custom-buttons'/);
