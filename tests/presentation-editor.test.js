@@ -102,8 +102,16 @@ test('users log in with email and password and can use forgot-password reset flo
   assert.match(html, /id="forgotPasswordButton"[\s\S]*Forgot password\?/);
   assert.match(html, /id="resetPasswordPanel"/);
   assert.match(html, /id="resetPasswordInput"[^>]*type="password"/);
-  assert.match(html, /id="inviteUserButton"[\s\S]*>Invite User<\/button>/);
-  assert.match(html, /id="signOutButton"[\s\S]*>Sign Out<\/button>/);
+  assert.match(html, /id="accountMenuButton"[\s\S]*aria-label="Account menu"/);
+  assert.match(html, /id="accountMenu"/);
+  assert.match(html, /id="accountResetPasswordButton"[\s\S]*>Reset Password<\/button>/);
+  assert.match(html, /id="teamMenuButton"[\s\S]*>Team<\/button>/);
+  assert.match(html, /id="signOutButton"[\s\S]*>Log Out<\/button>/);
+  assert.match(html, /id="teamPage"/);
+  assert.match(html, /id="teamList"/);
+  assert.match(html, /id="inviteUserForm"/);
+  assert.match(html, /function isOwnerUser\(/);
+  assert.match(html, /async function showTeamPage\(/);
   assert.match(html, /async function requireSession\(/);
   assert.match(html, /async function loginWithPassword\(/);
   assert.match(html, /async function requestPasswordReset\(/);
@@ -116,7 +124,7 @@ test('users log in with email and password and can use forgot-password reset flo
   assert.match(html, /localStorage\.removeItem\(AUTH_TOKEN_STORAGE_KEY\)/);
   assert.match(html, /return requestJson\(AUTH_API_URL, path, options\)/);
   assert.match(html, /return requestJson\(PRESENTATION_API_URL, path, options\)/);
-  assert.doesNotMatch(html, /inviteTokenInput|loginWithInviteToken|Paste invite code|\?invite=/);
+  assert.doesNotMatch(html, /inviteTokenInput|loginWithInviteToken|Paste invite code|\?invite=|id="inviteUserButton"/);
 });
 
 test('saved presentations are normalized so stale API data cannot blank the library', () => {

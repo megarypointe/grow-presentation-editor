@@ -376,6 +376,121 @@
       gap: 10px;
       align-items: center;
       flex-wrap: wrap;
+      position: relative;
+    }
+
+    .account-menu-button {
+      width: 40px;
+      height: 40px;
+      display: inline-grid;
+      place-items: center;
+      border: 1px solid rgba(226, 232, 240, 0.18);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      cursor: pointer;
+      font-size: 1.2rem;
+      font-weight: 900;
+    }
+
+    .account-menu-button:hover,
+    .account-menu-button:focus-visible {
+      background: rgba(96, 165, 250, 0.24);
+      outline: 2px solid rgba(96, 165, 250, 0.45);
+      outline-offset: 2px;
+    }
+
+    .account-menu {
+      position: absolute;
+      z-index: 40;
+      top: calc(100% + 8px);
+      right: 0;
+      min-width: 190px;
+      display: grid;
+      gap: 4px;
+      padding: 8px;
+      border: 1px solid rgba(226, 232, 240, 0.18);
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.97);
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.34);
+    }
+
+    .account-menu[hidden] {
+      display: none;
+    }
+
+    .account-menu button {
+      border: 0;
+      border-radius: 11px;
+      padding: 10px 12px;
+      background: transparent;
+      color: #e5e7eb;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 750;
+      text-align: left;
+    }
+
+    .account-menu button:hover,
+    .account-menu button:focus-visible {
+      background: rgba(96, 165, 250, 0.18);
+      color: white;
+      outline: none;
+    }
+
+    .team-page {
+      display: grid;
+      gap: 18px;
+      margin-top: 6px;
+    }
+
+    .team-page[hidden] {
+      display: none;
+    }
+
+    .team-header {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .team-header h3 {
+      font-size: clamp(1.6rem, 3vw, 2.4rem);
+      letter-spacing: -0.04em;
+    }
+
+    .team-card {
+      width: min(720px, 100%);
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid rgba(226, 232, 240, 0.16);
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.56);
+    }
+
+    .team-list {
+      display: grid;
+      gap: 8px;
+      width: min(720px, 100%);
+    }
+
+    .team-user-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid rgba(226, 232, 240, 0.14);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .team-role {
+      color: #bfdbfe;
+      font-size: 0.85rem;
+      font-weight: 850;
+      text-transform: uppercase;
     }
 
     .editor-header {
@@ -1083,8 +1198,12 @@
           <h2 id="libraryTitle">Grow Presentations</h2>
           <div class="auth-actions">
             <button class="tool-button" id="newPresentationButton" type="button" aria-expanded="false" aria-controls="createPresentationForm">New Slideshow</button>
-            <button class="tool-button" id="inviteUserButton" type="button" hidden>Invite User</button>
-            <button class="editor-link" id="signOutButton" type="button" hidden>Sign Out</button>
+            <button class="account-menu-button" id="accountMenuButton" type="button" aria-label="Account menu" aria-expanded="false" aria-controls="accountMenu">☰</button>
+            <div class="account-menu" id="accountMenu" hidden>
+              <button type="button" id="accountResetPasswordButton">Reset Password</button>
+              <button type="button" id="teamMenuButton" hidden>Team</button>
+              <button type="button" id="signOutButton" hidden>Log Out</button>
+            </div>
           </div>
         </div>
       </header>
@@ -1095,6 +1214,17 @@
       </form>
       <section class="presentation-manager" id="presentationManager" aria-label="Slideshows">
         <div class="presentation-list slideshow-grid" id="presentationList" aria-label="Slideshows"></div>
+      </section>
+      <section class="team-page" id="teamPage" hidden aria-label="Team settings">
+        <div class="team-header">
+          <h3>Team</h3>
+          <button class="editor-link" id="backToPresentationsButton" type="button">Back to Presentations</button>
+        </div>
+        <form class="create-presentation-form team-card" id="inviteUserForm">
+          <input id="inviteUserEmailInput" type="email" placeholder="Email address" aria-label="New team member email" required />
+          <button class="tool-button" type="submit">Invite User</button>
+        </form>
+        <div class="team-list" id="teamList" aria-label="Team users"></div>
       </section>
       <section id="editorWorkspace" hidden>
         <header class="editor-header edit-header">
@@ -1171,6 +1301,7 @@
     const editorWorkspace = document.querySelector('#editorWorkspace');
     const activePresentationTitle = document.querySelector('#activePresentationTitle');
     const presentationList = document.querySelector('#presentationList');
+    const presentationManager = document.querySelector('#presentationManager');
     const appContent = document.querySelector('#appContent');
     const loginPanel = document.querySelector('#loginPanel');
     const resetPasswordPanel = document.querySelector('#resetPasswordPanel');
@@ -1182,8 +1313,16 @@
     const resetPasswordInput = document.querySelector('#resetPasswordInput');
     const resetPasswordStatus = document.querySelector('#resetPasswordStatus');
     const loginStatus = document.querySelector('#loginStatus');
-    const inviteUserButton = document.querySelector('#inviteUserButton');
+    const accountMenuButton = document.querySelector('#accountMenuButton');
+    const accountMenu = document.querySelector('#accountMenu');
+    const accountResetPasswordButton = document.querySelector('#accountResetPasswordButton');
+    const teamMenuButton = document.querySelector('#teamMenuButton');
     const signOutButton = document.querySelector('#signOutButton');
+    const teamPage = document.querySelector('#teamPage');
+    const teamList = document.querySelector('#teamList');
+    const inviteUserForm = document.querySelector('#inviteUserForm');
+    const inviteUserEmailInput = document.querySelector('#inviteUserEmailInput');
+    const backToPresentationsButton = document.querySelector('#backToPresentationsButton');
     const newPresentationButton = document.querySelector('#newPresentationButton');
     const createPresentationForm = document.querySelector('#createPresentationForm');
     const presentationNameInput = document.querySelector('#presentationNameInput');
@@ -1387,7 +1526,7 @@
       loginPanel.hidden = true;
       resetPasswordPanel.hidden = true;
       appContent.hidden = false;
-      inviteUserButton.hidden = currentUser?.role !== 'admin';
+      teamMenuButton.hidden = !isOwnerUser(currentUser);
       signOutButton.hidden = false;
       if (loginStatus) loginStatus.textContent = '';
     }
@@ -1467,17 +1606,60 @@
       }
     }
 
-    async function inviteUser() {
-      const email = window.prompt('Email address to invite');
-      if (!email) return;
+    function isOwnerUser(user) {
+      const email = String(user?.email || '').toLowerCase();
+      return email === 'kenny@stuffyoucanuse.org' || email === 'kenny@growpage.org';
+    }
+
+    function toggleAccountMenu(forceOpen) {
+      const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : accountMenu.hidden;
+      accountMenu.hidden = !shouldOpen;
+      accountMenuButton.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    }
+
+    function renderTeamUsers(users = []) {
+      teamList.innerHTML = users.map((user) => `
+        <article class="team-user-row">
+          <span>${escapeAttribute(user.email)}</span>
+          <span class="team-role">${escapeAttribute(user.role || 'user')}</span>
+        </article>
+      `).join('');
+    }
+
+    async function showTeamPage() {
+      if (!isOwnerUser(currentUser)) return;
+      toggleAccountMenu(false);
+      presentationManager.hidden = true;
+      createPresentationForm.hidden = true;
+      editorWorkspace.hidden = true;
+      teamPage.hidden = false;
+      try {
+        const data = await requestJson(USERS_API_URL);
+        renderTeamUsers(data.users || []);
+      } catch (error) {
+        editorStatus.textContent = 'Could not load the team list.';
+      }
+    }
+
+    function showPresentationsPage() {
+      teamPage.hidden = true;
+      presentationManager.hidden = false;
+      editorWorkspace.hidden = true;
+      renderPresentationManager();
+    }
+
+    async function inviteUser(email) {
+      const trimmed = String(email || '').trim();
+      if (!trimmed || !isOwnerUser(currentUser)) return;
       try {
         const data = await requestJson(USERS_API_URL, '', {
           method: 'POST',
-          body: JSON.stringify({ email })
+          body: JSON.stringify({ email: trimmed })
         });
         const temporaryPassword = data.temporaryPassword;
         try { await navigator.clipboard.writeText(temporaryPassword); } catch (error) {}
         window.prompt(`Temporary password for ${data.user.email}. Share it securely; they'll be asked to reset it.`, temporaryPassword);
+        await showTeamPage();
       } catch (error) {
         editorStatus.textContent = 'Could not create that user.';
       }
@@ -1681,6 +1863,8 @@
       document.body.classList.add('editor-open', 'library-mode');
       document.body.classList.remove('editing-slideshow');
       editor.setAttribute('aria-hidden', 'false');
+      teamPage.hidden = true;
+      presentationManager.hidden = false;
       editorWorkspace.hidden = true;
       if (openEditorButton) openEditorButton.hidden = true;
       document.title = 'Grow Presentations';
@@ -2194,8 +2378,16 @@
     });
 
     openEditorButton?.addEventListener('click', openEditor);
-    inviteUserButton?.addEventListener('click', inviteUser);
+    accountMenuButton?.addEventListener('click', (event) => { event.stopPropagation(); toggleAccountMenu(); });
+    accountResetPasswordButton?.addEventListener('click', () => { toggleAccountMenu(false); requestPasswordReset(currentUser?.email || loginEmailInput.value); });
+    teamMenuButton?.addEventListener('click', showTeamPage);
     signOutButton?.addEventListener('click', signOut);
+    backToPresentationsButton?.addEventListener('click', showPresentationsPage);
+    inviteUserForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await inviteUser(inviteUserEmailInput.value);
+      inviteUserForm.reset();
+    });
     loginForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const loggedIn = await loginWithPassword(loginEmailInput.value, loginPasswordInput.value);
@@ -2233,6 +2425,9 @@
       if (!event.target.closest('.slideshow-card')) {
         presentationList.querySelectorAll('.slideshow-menu').forEach((menu) => { menu.hidden = true; });
         presentationList.querySelectorAll('.slideshow-menu-button').forEach((button) => button.setAttribute('aria-expanded', 'false'));
+      }
+      if (!event.target.closest('.auth-actions')) {
+        toggleAccountMenu(false);
       }
     });
     addSliderForm?.addEventListener('submit', (event) => {
