@@ -179,6 +179,10 @@ test('editor can add slider-question, button-choice, and media slides from hidde
   assert.match(html, /id="addButtonsForm"/);
   assert.match(html, /id="buttonsQuestionInput"/);
   assert.match(html, /id="buttonChoiceCountInput"[^>]*type="number"/);
+  assert.match(html, /<span>Number of buttons<\/span>[\s\S]*id="buttonChoiceCountInput"/);
+  assert.match(html, /id="updateButtonChoiceCountButton"[\s\S]*Apply Count/);
+  assert.match(html, />Add Button Slide<\/button>/);
+  assert.match(html, /addButtonsForm\.hidden = true/);
   assert.match(html, /id="buttonChoiceFields"/);
   assert.match(html, /function renderButtonChoiceFields\(/);
   assert.match(html, /function collectButtonChoices\(/);

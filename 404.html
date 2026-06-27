@@ -1006,6 +1006,14 @@
       align-items: center;
     }
 
+    .tool-inline-label {
+      display: grid;
+      gap: 4px;
+      color: #cbd5e1;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
     .tool-row input,
     .tool-row select,
     .editor-tool input[type="text"],
@@ -1350,9 +1358,9 @@
             <h3>Add buttons</h3>
             <input id="buttonsQuestionInput" type="text" placeholder="Click all that apply:" aria-label="Button slide question" required />
             <div class="tool-row">
-              <input id="buttonChoiceCountInput" type="number" value="3" min="1" max="12" aria-label="Number of buttons" />
-              <button class="tool-button" type="button" id="updateButtonChoiceCountButton">Update Buttons</button>
-              <button class="tool-button" type="submit">Add Buttons</button>
+              <label class="tool-inline-label"><span>Number of buttons</span><input id="buttonChoiceCountInput" type="number" value="3" min="1" max="12" aria-label="Number of buttons" /></label>
+              <button class="tool-button" type="button" id="updateButtonChoiceCountButton">Apply Count</button>
+              <button class="tool-button" type="submit">Add Button Slide</button>
             </div>
             <div id="buttonChoiceFields" class="button-choice-fields" aria-label="Button labels"></div>
           </form>
@@ -2456,7 +2464,7 @@
       if (definition.kind === 'custom-buttons') {
         showToolPanel('buttons');
         addButtonsForm.dataset.editingSlideId = slideId;
-        addButtonsForm.querySelector('button[type="submit"]').textContent = 'Save Buttons';
+        addButtonsForm.querySelector('button[type="submit"]').textContent = 'Save Button Slide';
         buttonsQuestionInput.value = definition.question;
         populateButtonChoiceFields(definition.choices || []);
       }
@@ -2498,7 +2506,7 @@
         renderSliderLabelFields({});
       }
       if (tool === 'buttons' && !addButtonsForm.dataset.editingSlideId) {
-        addButtonsForm.querySelector('button[type="submit"]').textContent = 'Add Buttons';
+        addButtonsForm.querySelector('button[type="submit"]').textContent = 'Add Button Slide';
         populateButtonChoiceFields(['', '', '']);
       }
       const activeForm = tool === 'slider' ? addSliderForm : tool === 'buttons' ? addButtonsForm : addMediaForm;
@@ -2701,13 +2709,14 @@
       if (editingSlideId) {
         updateButtonsSlide(editingSlideId, buttonsQuestionInput.value.trim() || 'Click all that apply:', choices);
         delete addButtonsForm.dataset.editingSlideId;
-        addButtonsForm.querySelector('button[type="submit"]').textContent = 'Add Buttons';
+        addButtonsForm.querySelector('button[type="submit"]').textContent = 'Add Button Slide';
       } else {
         createButtonsSlide(buttonsQuestionInput.value.trim() || 'Click all that apply:', choices);
       }
       addButtonsForm.reset();
       buttonChoiceCountInput.value = '3';
       renderButtonChoiceFields(['', '', '']);
+      addButtonsForm.hidden = true;
     });
     addMediaForm?.addEventListener('submit', (event) => {
       event.preventDefault();
