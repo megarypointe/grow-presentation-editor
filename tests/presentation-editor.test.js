@@ -58,6 +58,21 @@ test('slide editor exists but is hidden until Edit is chosen', () => {
   assert.match(html, /function renderEditorCards\(/);
 });
 
+
+
+test('walkthrough domain is the management page and presentation cards link to unique numeric URLs', () => {
+  assert.match(html, /const MANAGEMENT_HOST = 'walkthrough\.growpage\.org'/);
+  assert.match(html, /const PRESENTATION_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/presentations'/);
+  assert.match(html, /function getRequestedPresentationId\(/);
+  assert.match(html, /function showManagementPage\(/);
+  assert.match(html, /function showPresentationPage\(/);
+  assert.match(html, /history\.pushState\(\{ presentationId \}, '', `\/\$\{encodeURIComponent\(presentationId\)\}`\)/);
+  assert.match(html, /window\.addEventListener\('popstate'/);
+  assert.match(html, /createPresentationRecord\('9843754', 'Grow Presentation'\)/);
+  assert.match(html, /createPresentationRecord\('2381976', 'Second Presentation'\)/);
+  assert.doesNotMatch(html, /id:\s*'grow-presentation'|id:\s*'second-presentation'/);
+});
+
 test('slideshow data is loaded and saved through the Cloudflare API, not browser storage', () => {
   assert.match(html, /const PRESENTATION_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/presentations'/);
   assert.match(html, /async function apiRequest\(/);
