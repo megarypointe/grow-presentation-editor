@@ -168,13 +168,28 @@ test('slides are draggable and dropped order is persisted in edit mode', () => {
   assert.match(html, /saveActivePresentation\(\)/);
 });
 
-test('editor can add slider-question and media slides from hidden panels', () => {
+test('editor can add slider-question, button-choice, and media slides from hidden panels', () => {
   assert.match(html, /id="addSliderForm"/);
   assert.match(html, /id="sliderQuestionInput"/);
   assert.match(html, /id="sliderLabelFields"/);
   assert.match(html, /function createSliderSlide\(/);
   assert.match(html, /function renderSliderLabelFields\(/);
   assert.match(html, /kind:\s*'custom-slider'/);
+  assert.match(html, /data-tool="buttons"[\s\S]*Add Buttons/);
+  assert.match(html, /id="addButtonsForm"/);
+  assert.match(html, /id="buttonsQuestionInput"/);
+  assert.match(html, /id="buttonChoiceCountInput"[^>]*type="number"/);
+  assert.match(html, /id="buttonChoiceFields"/);
+  assert.match(html, /function renderButtonChoiceFields\(/);
+  assert.match(html, /function collectButtonChoices\(/);
+  assert.match(html, /function createButtonsSlide\(/);
+  assert.match(html, /function updateButtonsSlide\(/);
+  assert.match(html, /kind:\s*'custom-buttons'/);
+  assert.match(html, /button-choice-grid/);
+  assert.match(html, /aria-pressed/);
+  assert.match(html, /definition\.choices/);
+  assert.match(html, /definition\.kind === 'custom-slider' \|\| definition\.kind === 'custom-buttons'/);
+  assert.match(html, /editCustomSlide\(slideId\)/);
   assert.match(html, /id="addMediaForm"/);
   assert.match(html, /id="mediaFileInput"/);
   assert.match(html, /function getMediaKind\(file\)/);
