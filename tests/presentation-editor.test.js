@@ -25,10 +25,13 @@ test('slideshow library is a minimal boxes-only landing page', () => {
   assert.doesNotMatch(html, />Present<\/button>|>Open Presentation<\/button>/);
 });
 
-test('each slideshow renders as one thumbnail box with a three-dot menu', () => {
+test('each slideshow renders as one compact thumbnail box with a three-dot menu', () => {
   assert.match(html, /class="slideshow-card/);
   assert.match(html, /class="slideshow-card-main"/);
   assert.match(html, /class="slideshow-thumbnail"/);
+  assert.match(html, /grid-template-columns:\s*repeat\(auto-fit, minmax\(150px, 180px\)\)/);
+  assert.match(html, /\.slideshow-card-main\s*{[\s\S]*?gap:\s*8px/);
+  assert.match(html, /\.slideshow-title\s*{[\s\S]*?font-size:\s*0\.88rem/);
   assert.match(html, /function getPresentationThumbnail\(/);
   assert.match(html, /assets\/slides\/\$\{thumbnail\.file\}/);
   assert.match(html, /object-fit:\s*contain/);
