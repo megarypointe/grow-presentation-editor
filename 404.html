@@ -1059,6 +1059,39 @@
       font-weight: 750;
     }
 
+    .branch-choice-row {
+      display: grid;
+      grid-template-columns: minmax(140px, 1fr) minmax(140px, 1fr);
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid rgba(96, 165, 250, 0.18);
+      border-radius: 14px;
+      background: rgba(96, 165, 250, 0.08);
+    }
+
+    .branch-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    .branch-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: rgba(34, 197, 94, 0.16);
+      color: #bbf7d0;
+      font-size: 0.72rem;
+      font-weight: 850;
+    }
+
+    .slide-card.branch-start {
+      border-color: rgba(34, 197, 94, 0.48);
+      box-shadow: 0 16px 42px rgba(34, 197, 94, 0.12);
+    }
+
     .tool-button {
       border: 0;
       border-radius: 999px;
@@ -1522,7 +1555,7 @@
             <h1>${escapeAttribute(definition.question)}</h1>
             <div class="button-choice-grid">
               ${buttonChoices.map((choice, choiceIndex) => `
-                <button class="choice-button" type="button" aria-pressed="false" data-choice-index="${choiceIndex}" data-target-slide-id="${escapeAttribute(choice.targetSlideId || '')}">${escapeAttribute(choice.label)}</button>
+                <button class="choice-button" type="button" aria-pressed="false" data-choice-index="${choiceIndex}" data-target-slide-id="${escapeAttribute(choice.targetSlideId || '')}" data-branch-id="${escapeAttribute(choice.branchId || '')}" data-branch-name="${escapeAttribute(choice.branchName || '')}">${escapeAttribute(choice.label)}</button>
               `).join('')}
             </div>
           </main>
@@ -2171,16 +2204,39 @@
 
     function normalizeButtonChoice(choice, index = 0) {
       if (typeof choice === 'string') {
-        return { label: choice.trim() || `Button ${index + 1}`, targetSlideId: '' };
+        const label = choice.trim() || `Button ${index + 1}`;
+        return { label, targetSlideId: '', branchId: '', branchName: label };
       }
+      const label = choice?.label?.trim() || `Button ${index + 1}`;
       return {
-        label: choice?.label?.trim() || `Button ${index + 1}`,
-        targetSlideId: slideDefinitions.some((slide) => slide.id === choice?.targetSlideId) ? choice.targetSlideId : ''
+        label,
+        targetSlideId: slideDefinitions.some((slide) => slide.id === choice?.targetSlideId) ? choice.targetSlideId : '',
+        branchId: choice?.branchId || '',
+        branchName: choice?.branchName?.trim() || label
+      };
+    }
+
+    function ensureButtonChoiceBranch(choice, index = 0, parentSlideId = 'button-slide') {
+      const normalized = normalizeButtonChoice(choice, index);
+      const safeParentId = String(parentSlideId || 'button-slide').replace(/[^a-z0-9-]/gi, '-').toLowerCase();
+      const safeBranchName = String(normalized.branchName || normalized.label || `Branch ${index + 1}`).replace(/[^a-z0-9-]/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || `branch-${index + 1}`;
+      return {
+        ...normalized,
+        branchId: normalized.branchId || `${safeParentId}-branch-${index + 1}-${safeBranchName}`,
+        branchName: normalized.branchName || `Branch ${index + 1}`
       };
     }
 
     function getButtonChoiceLabel(choice, index = 0) {
       return normalizeButtonChoice(choice, index).label;
+    }
+
+    function getBranchStartLabels(slideId) {
+      return customSlides
+        .filter((slide) => slide.kind === 'custom-buttons')
+        .flatMap((slide) => (slide.choices || []).map(normalizeButtonChoice))
+        .filter((choice) => choice.targetSlideId === slideId)
+        .map((choice) => choice.branchName || choice.label);
     }
 
     function getSlidePathOptions(selectedSlideId = '') {
@@ -2201,14 +2257,21 @@
       buttonChoiceFields.innerHTML = Array.from({ length: count }, (_, index) => {
         const choice = normalizeButtonChoice(normalizedChoices[index], index);
         return `
-          <label>
-            Button ${index + 1}
-            <input type="text" data-button-choice-index="${index}" value="${escapeAttribute(choice.label)}" placeholder="Button ${index + 1}" />
-          </label>
-          <label>
-            Path after Button ${index + 1}
-            <select data-button-target-index="${index}" aria-label="Path after button ${index + 1}">${getSlidePathOptions(choice.targetSlideId)}</select>
-          </label>
+          <div class="branch-choice-row">
+            <label>
+              Button ${index + 1}
+              <input type="text" data-button-choice-index="${index}" value="${escapeAttribute(choice.label)}" placeholder="Button ${index + 1}" />
+            </label>
+            <label>
+              Branch name
+              <input type="text" data-button-branch-index="${index}" value="${escapeAttribute(choice.branchName || choice.label)}" placeholder="Branch ${index + 1}" />
+              <input type="hidden" data-button-branch-id-index="${index}" value="${escapeAttribute(choice.branchId || '')}" />
+            </label>
+            <label>
+              Branch starts at Button ${index + 1}
+              <select data-button-target-index="${index}" aria-label="Branch starts at button ${index + 1}">${getSlidePathOptions(choice.targetSlideId)}</select>
+            </label>
+          </div>
         `;
       }).join('');
     }
@@ -2217,9 +2280,13 @@
       return [...buttonChoiceFields.querySelectorAll('[data-button-choice-index]')]
         .map((input, index) => {
           const targetSelect = buttonChoiceFields.querySelector(`[data-button-target-index="${index}"]`);
+          const branchInput = buttonChoiceFields.querySelector(`[data-button-branch-index="${index}"]`);
+          const branchIdInput = buttonChoiceFields.querySelector(`[data-button-branch-id-index="${index}"]`);
           return {
             label: input.value.trim() || `Button ${index + 1}`,
-            targetSlideId: targetSelect?.value || ''
+            targetSlideId: targetSelect?.value || '',
+            branchId: branchIdInput?.value || '',
+            branchName: branchInput?.value.trim() || input.value.trim() || `Branch ${index + 1}`
           };
         });
     }
@@ -2273,18 +2340,19 @@
 
     function createButtonsSlide(question, choices = []) {
       const safeQuestion = question.trim() || 'Click all that apply:';
-      const safeChoices = choices.map(normalizeButtonChoice).slice(0, 12);
       const definition = {
         id: `custom-buttons-${Date.now()}`,
         title: safeQuestion,
         question: safeQuestion,
-        choices: safeChoices.length ? safeChoices : [
-          { label: 'Button 1', targetSlideId: '' },
-          { label: 'Button 2', targetSlideId: '' },
-          { label: 'Button 3', targetSlideId: '' }
-        ],
+        choices: [],
         kind: 'custom-buttons'
       };
+      const safeChoices = choices.map(normalizeButtonChoice).map((choice, index) => ensureButtonChoiceBranch(choice, index, definition.id)).slice(0, 12);
+      definition.choices = safeChoices.length ? safeChoices : [
+        ensureButtonChoiceBranch({ label: 'Button 1', targetSlideId: '', branchName: 'Button 1' }, 0, definition.id),
+        ensureButtonChoiceBranch({ label: 'Button 2', targetSlideId: '', branchName: 'Button 2' }, 1, definition.id),
+        ensureButtonChoiceBranch({ label: 'Button 3', targetSlideId: '', branchName: 'Button 3' }, 2, definition.id)
+      ];
       registerCustomSlide(definition);
     }
 
@@ -2293,7 +2361,7 @@
       if (!definition) return;
       definition.title = question;
       definition.question = question;
-      definition.choices = choices.map(normalizeButtonChoice).slice(0, 12);
+      definition.choices = choices.map(normalizeButtonChoice).map((choice, index) => ensureButtonChoiceBranch(choice, index, slideId)).slice(0, 12);
       if (customSlides.some((slide) => slide.id === slideId)) {
         saveCustomSlides();
       }
@@ -2401,6 +2469,8 @@
         card.dataset.slideId = slideId;
         const canEdit = definition.kind === 'custom-slider' || definition.kind === 'custom-buttons';
         const canDelete = true;
+        const branchStartLabels = getBranchStartLabels(slideId);
+        card.classList.toggle('branch-start', branchStartLabels.length > 0);
         card.innerHTML = `
           <div class="slide-card-preview">
             ${definition.kind === 'image'
@@ -2417,6 +2487,7 @@
                       ? `<div class="slide-card-question">${definition.question}</div>`
                       : '<div class="slide-card-placeholder">Slide</div>'}
           </div>
+          ${branchStartLabels.length ? `<div class="branch-badges" aria-label="Branch starts here">${branchStartLabels.map((label) => `<span class="branch-badge">Branch starts here: ${escapeAttribute(label)}</span>`).join('')}</div>` : ''}
           ${(canEdit || canDelete) ? `
             <button class="card-menu-button" type="button" aria-label="Slide options" aria-expanded="false">⋯</button>
             <div class="card-menu" hidden>

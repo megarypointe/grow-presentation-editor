@@ -217,3 +217,18 @@ test('button slides can route each choice to a custom slide path', () => {
   assert.match(html, /choices\.map\(normalizeButtonChoice\)/);
   assert.match(html, /populateButtonChoiceFields\(definition\.choices \|\| \[\]\)/);
 });
+
+test('button decisions create named branches that are visible in the editor', () => {
+  assert.match(html, /data-button-branch-index/);
+  assert.match(html, /Branch name/);
+  assert.match(html, /Branch starts at/);
+  assert.match(html, /branchId/);
+  assert.match(html, /branchName/);
+  assert.match(html, /function ensureButtonChoiceBranch\(/);
+  assert.match(html, /function getBranchStartLabels\(/);
+  assert.match(html, /data-branch-id="\$\{escapeAttribute\(choice\.branchId \|\| ''\)\}"/);
+  assert.match(html, /data-branch-name="\$\{escapeAttribute\(choice\.branchName \|\| ''\)\}"/);
+  assert.match(html, /class="branch-badge"/);
+  assert.match(html, /Branch starts here/);
+  assert.match(html, /card\.classList\.toggle\('branch-start'/);
+});
