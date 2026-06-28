@@ -202,3 +202,18 @@ test('editor can add slider-question, button-choice, and media slides from hidde
   assert.match(html, /function getMediaKind\(file\)/);
   assert.match(html, /createMediaSlide\(file\)/);
 });
+
+test('button slides can route each choice to a custom slide path', () => {
+  assert.match(html, /data-button-target-index/);
+  assert.match(html, />Continue normally<\/option>/);
+  assert.match(html, /function getSlidePathOptions\(/);
+  assert.match(html, /function normalizeButtonChoice\(/);
+  assert.match(html, /function getButtonChoiceLabel\(/);
+  assert.match(html, /function goToSlideId\(/);
+  assert.match(html, /targetSlideId/);
+  assert.match(html, /data-target-slide-id="\$\{escapeAttribute\(choice\.targetSlideId \|\| ''\)\}"/);
+  assert.match(html, /button\.dataset\.targetSlideId/);
+  assert.match(html, /goToSlideId\(targetSlideId\)/);
+  assert.match(html, /choices\.map\(normalizeButtonChoice\)/);
+  assert.match(html, /populateButtonChoiceFields\(definition\.choices \|\| \[\]\)/);
+});

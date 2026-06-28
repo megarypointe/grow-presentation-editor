@@ -1020,6 +1020,7 @@
     .editor-tool input[type="text"],
     .editor-tool input[type="number"],
     .editor-tool input[type="file"],
+    .editor-tool select,
     .editor-tool textarea {
       min-width: 0;
       width: 100%;
@@ -1514,13 +1515,14 @@
       }
 
       if (definition.kind === 'custom-buttons') {
+        const buttonChoices = (definition.choices || []).map(normalizeButtonChoice);
         section.innerHTML = `
           <main>
             <div class="eyebrow">Choose all that apply</div>
             <h1>${escapeAttribute(definition.question)}</h1>
             <div class="button-choice-grid">
-              ${(definition.choices || []).map((choice, choiceIndex) => `
-                <button class="choice-button" type="button" aria-pressed="false" data-choice-index="${choiceIndex}">${escapeAttribute(choice)}</button>
+              ${buttonChoices.map((choice, choiceIndex) => `
+                <button class="choice-button" type="button" aria-pressed="false" data-choice-index="${choiceIndex}" data-target-slide-id="${escapeAttribute(choice.targetSlideId || '')}">${escapeAttribute(choice.label)}</button>
               `).join('')}
             </div>
           </main>
@@ -1528,7 +1530,9 @@
         section.querySelectorAll('.choice-button').forEach((button) => {
           button.addEventListener('click', () => {
             const nextPressed = button.getAttribute('aria-pressed') !== 'true';
+            const targetSlideId = button.dataset.targetSlideId;
             button.setAttribute('aria-pressed', nextPressed ? 'true' : 'false');
+            if (targetSlideId) goToSlideId(targetSlideId);
           });
         });
       }
@@ -2165,19 +2169,59 @@
       return Math.max(1, Math.min(12, Number.isFinite(count) ? Math.round(count) : 3));
     }
 
+    function normalizeButtonChoice(choice, index = 0) {
+      if (typeof choice === 'string') {
+        return { label: choice.trim() || `Button ${index + 1}`, targetSlideId: '' };
+      }
+      return {
+        label: choice?.label?.trim() || `Button ${index + 1}`,
+        targetSlideId: slideDefinitions.some((slide) => slide.id === choice?.targetSlideId) ? choice.targetSlideId : ''
+      };
+    }
+
+    function getButtonChoiceLabel(choice, index = 0) {
+      return normalizeButtonChoice(choice, index).label;
+    }
+
+    function getSlidePathOptions(selectedSlideId = '') {
+      return [
+        '<option value="">Continue normally</option>',
+        ...slideOrder.map((slideId, index) => {
+          const definition = slideDefinitions.find((slide) => slide.id === slideId);
+          const label = definition?.title || definition?.question || `Slide ${index + 1}`;
+          const selected = slideId === selectedSlideId ? ' selected' : '';
+          return `<option value="${escapeAttribute(slideId)}"${selected}>Go to ${index + 1}: ${escapeAttribute(label)}</option>`;
+        })
+      ].join('');
+    }
+
     function renderButtonChoiceFields(choices = collectButtonChoices()) {
       const count = getButtonChoiceCount();
-      buttonChoiceFields.innerHTML = Array.from({ length: count }, (_, index) => `
-        <label>
-          Button ${index + 1}
-          <input type="text" data-button-choice-index="${index}" value="${escapeAttribute(choices[index] || '')}" placeholder="Button ${index + 1}" />
-        </label>
-      `).join('');
+      const normalizedChoices = choices.map(normalizeButtonChoice);
+      buttonChoiceFields.innerHTML = Array.from({ length: count }, (_, index) => {
+        const choice = normalizeButtonChoice(normalizedChoices[index], index);
+        return `
+          <label>
+            Button ${index + 1}
+            <input type="text" data-button-choice-index="${index}" value="${escapeAttribute(choice.label)}" placeholder="Button ${index + 1}" />
+          </label>
+          <label>
+            Path after Button ${index + 1}
+            <select data-button-target-index="${index}" aria-label="Path after button ${index + 1}">${getSlidePathOptions(choice.targetSlideId)}</select>
+          </label>
+        `;
+      }).join('');
     }
 
     function collectButtonChoices() {
       return [...buttonChoiceFields.querySelectorAll('[data-button-choice-index]')]
-        .map((input, index) => input.value.trim() || `Button ${index + 1}`);
+        .map((input, index) => {
+          const targetSelect = buttonChoiceFields.querySelector(`[data-button-target-index="${index}"]`);
+          return {
+            label: input.value.trim() || `Button ${index + 1}`,
+            targetSlideId: targetSelect?.value || ''
+          };
+        });
     }
 
     function populateButtonChoiceFields(choices = []) {
@@ -2229,12 +2273,16 @@
 
     function createButtonsSlide(question, choices = []) {
       const safeQuestion = question.trim() || 'Click all that apply:';
-      const safeChoices = choices.map((choice, index) => choice.trim() || `Button ${index + 1}`).slice(0, 12);
+      const safeChoices = choices.map(normalizeButtonChoice).slice(0, 12);
       const definition = {
         id: `custom-buttons-${Date.now()}`,
         title: safeQuestion,
         question: safeQuestion,
-        choices: safeChoices.length ? safeChoices : ['Button 1', 'Button 2', 'Button 3'],
+        choices: safeChoices.length ? safeChoices : [
+          { label: 'Button 1', targetSlideId: '' },
+          { label: 'Button 2', targetSlideId: '' },
+          { label: 'Button 3', targetSlideId: '' }
+        ],
         kind: 'custom-buttons'
       };
       registerCustomSlide(definition);
@@ -2245,7 +2293,7 @@
       if (!definition) return;
       definition.title = question;
       definition.question = question;
-      definition.choices = choices.map((choice, index) => choice.trim() || `Button ${index + 1}`).slice(0, 12);
+      definition.choices = choices.map(normalizeButtonChoice).slice(0, 12);
       if (customSlides.some((slide) => slide.id === slideId)) {
         saveCustomSlides();
       }
@@ -2551,6 +2599,11 @@
     function goToSlide(index) {
       currentSlide = Math.max(0, Math.min(index, slides.length - 1));
       updateDeck();
+    }
+
+    function goToSlideId(slideId) {
+      const targetIndex = slideOrder.indexOf(slideId);
+      if (targetIndex >= 0) goToSlide(targetIndex);
     }
 
     function nextSlide() { goToSlide(currentSlide + 1); }
