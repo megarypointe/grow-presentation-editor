@@ -219,22 +219,23 @@ test('button slides can route each choice to a custom slide path without a dropd
   assert.match(html, /populateButtonChoiceFields\(definition\.choices \|\| \[\]\)/);
 });
 
-test('button decisions create named branches that are assigned visually from the pathway map', () => {
+test('button decisions create named branches that are assigned by direct drag and drop', () => {
   assert.match(html, /data-button-branch-index/);
   assert.match(html, /Branch name/);
   assert.doesNotMatch(html, /Branch starts at/);
   assert.match(html, /branchId/);
   assert.match(html, /branchName/);
-  assert.match(html, /let activePathAssignment/);
+  assert.doesNotMatch(html, /let activePathAssignment/);
   assert.match(html, /function ensureButtonChoiceBranch\(/);
   assert.match(html, /function getBranchStartLabels\(/);
-  assert.match(html, /function selectPathAssignment\(/);
-  assert.match(html, /function assignPathStart\(/);
+  assert.doesNotMatch(html, /function selectPathAssignment\(/);
+  assert.doesNotMatch(html, /function assignPathStart\(/);
   assert.match(html, /function updateButtonChoiceTarget\(/);
-  assert.match(html, /data-pathway-assign-branch-id/);
-  assert.match(html, /Click a path, then click a slide below/);
-  assert.match(html, /card\.classList\.toggle\('path-assignment-target'/);
-  assert.match(html, /card\.addEventListener\('click'[\s\S]*assignPathStart\(slideId\)/);
+  assert.doesNotMatch(html, /data-pathway-assign-branch-id/);
+  assert.doesNotMatch(html, /Click a path, then click a slide below/);
+  assert.doesNotMatch(html, /path-assignment-target/);
+  assert.doesNotMatch(html, /assignPathStart\(slideId\)/);
+  assert.match(html, /Drop slides here/);
   assert.match(html, /data-branch-id="\$\{escapeAttribute\(choice\.branchId \|\| ''\)\}"/);
   assert.match(html, /data-branch-name="\$\{escapeAttribute\(choice\.branchName \|\| ''\)\}"/);
   assert.match(html, /class="branch-badge"/);
@@ -258,7 +259,7 @@ test('editor shows normal slides until a button slide creates inline branches in
   assert.match(html, /data-pathway-branch-id/);
   assert.match(html, /data-pathway-slide-id/);
   assert.match(html, /editCustomSlide\(hub\.id\)/);
-  assert.match(html, /assignPathStart\(slideId\)/);
+  assert.match(html, /moveSlideToPathway\(droppedSlideId, hubId, branchId\)/);
   assert.doesNotMatch(html, /pathway-hub-label">Buttons Slide/);
   assert.doesNotMatch(html, /background:\s*#020617;\s*color:\s*white;[\s\S]*\.pathway-hub-card/);
 });
