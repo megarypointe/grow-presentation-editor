@@ -232,3 +232,22 @@ test('button decisions create named branches that are visible in the editor', ()
   assert.match(html, /Branch starts here/);
   assert.match(html, /card\.classList\.toggle\('branch-start'/);
 });
+
+test('editor shows button slides as a hub-and-pathway visual map instead of only a flat slide row', () => {
+  assert.match(html, /id="pathwayMap"/);
+  assert.match(html, /class="pathway-map"/);
+  assert.match(html, /class="pathway-hub-card"/);
+  assert.match(html, /Buttons Slide/);
+  assert.match(html, /class="pathway-branch-grid"/);
+  assert.match(html, /class="pathway-column"/);
+  assert.match(html, /class="pathway-arrow pathway-arrow-main"/);
+  assert.match(html, /class="pathway-arrow pathway-arrow-step"/);
+  assert.match(html, /function renderPathwayMap\(/);
+  assert.match(html, /function getButtonPathways\(/);
+  assert.match(html, /function getSlidesForButtonPath\(/);
+  assert.match(html, /pathwayMap\.innerHTML/);
+  assert.match(html, /data-pathway-branch-id/);
+  assert.match(html, /data-pathway-slide-id/);
+  assert.match(html, /editCustomSlide\(hub\.id\)/);
+  assert.match(html, /goToSlideId\(slideId\)/);
+});

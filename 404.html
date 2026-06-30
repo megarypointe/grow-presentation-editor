@@ -1092,6 +1092,180 @@
       box-shadow: 0 16px 42px rgba(34, 197, 94, 0.12);
     }
 
+    .pathway-map {
+      display: grid;
+      gap: 18px;
+      margin: 8px 0 22px;
+      padding: clamp(16px, 2.5vw, 28px);
+      border: 1px solid rgba(226, 232, 240, 0.2);
+      border-radius: 28px;
+      background: #ffffff;
+      color: #020617;
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+    }
+
+    .pathway-map:empty {
+      display: none;
+    }
+
+    .pathway-map-board {
+      display: grid;
+      justify-items: center;
+      gap: 16px;
+    }
+
+    .pathway-hub-card,
+    .pathway-step-card,
+    .pathway-empty-card {
+      border: 0;
+      background: #020617;
+      color: white;
+      font: inherit;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      box-shadow: none;
+    }
+
+    .pathway-hub-card {
+      width: min(520px, 100%);
+      min-height: 86px;
+      display: grid;
+      place-items: center;
+      gap: 4px;
+      padding: 18px 28px;
+      cursor: pointer;
+    }
+
+    .pathway-hub-label {
+      font-size: clamp(1.5rem, 3vw, 2.45rem);
+      line-height: 1;
+    }
+
+    .pathway-hub-question {
+      max-width: 34rem;
+      color: rgba(255, 255, 255, 0.74);
+      font-size: 0.78rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .pathway-main-arrows {
+      width: min(980px, 100%);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      align-items: end;
+      gap: 24px;
+      color: #020617;
+      pointer-events: none;
+    }
+
+    .pathway-arrow {
+      display: grid;
+      place-items: center;
+      color: #020617;
+      font-size: 2.9rem;
+      line-height: 0.72;
+      font-weight: 950;
+    }
+
+    .pathway-arrow-main:nth-child(3n + 1) {
+      transform: rotate(24deg);
+    }
+
+    .pathway-arrow-main:nth-child(3n + 2) {
+      transform: translateY(2px);
+    }
+
+    .pathway-arrow-main:nth-child(3n) {
+      transform: rotate(-24deg);
+    }
+
+    .pathway-branch-grid {
+      width: min(1040px, 100%);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: clamp(14px, 2.2vw, 30px);
+      align-items: start;
+    }
+
+    .pathway-column {
+      display: grid;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .pathway-column-title {
+      display: grid;
+      gap: 2px;
+      min-height: 68px;
+      padding: 12px 14px;
+      border: 0;
+      background: #020617;
+      color: white;
+      text-align: center;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .pathway-column-title strong {
+      font-size: 1rem;
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+    }
+
+    .pathway-column-title span {
+      color: rgba(255, 255, 255, 0.62);
+      font-size: 0.68rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .pathway-step-card,
+    .pathway-empty-card {
+      width: 100%;
+      min-height: 76px;
+      display: grid;
+      place-items: center;
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .pathway-step-card span {
+      display: block;
+      color: rgba(255, 255, 255, 0.58);
+      font-size: 0.68rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .pathway-step-card strong {
+      display: block;
+      margin-top: 3px;
+      font-size: 0.9rem;
+      line-height: 1.12;
+    }
+
+    .pathway-empty-card {
+      border: 2px dashed #020617;
+      background: white;
+      color: #020617;
+      font-size: 0.86rem;
+    }
+
+    .pathway-hub-card:hover,
+    .pathway-hub-card:focus-visible,
+    .pathway-column-title:hover,
+    .pathway-column-title:focus-visible,
+    .pathway-step-card:hover,
+    .pathway-step-card:focus-visible {
+      outline: 4px solid rgba(2, 6, 23, 0.18);
+      outline-offset: 4px;
+      transform: translateY(-1px);
+    }
+
     .tool-button {
       border: 0;
       border-radius: 999px;
@@ -1405,6 +1579,7 @@
             <button class="tool-button" type="submit">Upload Slide</button>
           </form>
         </div>
+        <div class="pathway-map" id="pathwayMap" aria-label="Button slide pathway map"></div>
         <div class="editor-grid" id="editorGrid" aria-label="Slides in presentation order"></div>
       </section>
       </div>
@@ -1448,6 +1623,7 @@
     const deck = document.querySelector('#deck');
     const editor = document.querySelector('#presentationEditor');
     const editorGrid = document.querySelector('#editorGrid');
+    const pathwayMap = document.querySelector('#pathwayMap');
     const editorStatus = document.querySelector('#editorStatus');
     const editorWorkspace = document.querySelector('#editorWorkspace');
     const activePresentationTitle = document.querySelector('#activePresentationTitle');
@@ -2251,6 +2427,94 @@
       ].join('');
     }
 
+    function getSlideCardTitle(slideId, fallbackIndex = 0) {
+      const definition = slideDefinitions.find((slide) => slide.id === slideId);
+      return definition?.title || definition?.question || `Slide ${fallbackIndex + 1}`;
+    }
+
+    function getSlidesForButtonPath(choice, siblingChoices = []) {
+      const normalized = normalizeButtonChoice(choice);
+      const startIndex = slideOrder.indexOf(normalized.targetSlideId);
+      if (startIndex < 0) return [];
+      const nextStartIndex = siblingChoices
+        .map(normalizeButtonChoice)
+        .map((sibling) => slideOrder.indexOf(sibling.targetSlideId))
+        .filter((index) => index > startIndex)
+        .sort((a, b) => a - b)[0] || slideOrder.length;
+      return slideOrder.slice(startIndex, nextStartIndex);
+    }
+
+    function getButtonPathways() {
+      return customSlides
+        .filter((slide) => slide.kind === 'custom-buttons')
+        .map((hub) => ({
+          hub,
+          choices: (hub.choices || []).map((choice, index) => ensureButtonChoiceBranch(choice, index, hub.id))
+        }));
+    }
+
+    function renderPathwayStepCard(slideId, index) {
+      return `
+        <button class="pathway-step-card" type="button" data-pathway-slide-id="${escapeAttribute(slideId)}">
+          <span>Slide ${slideOrder.indexOf(slideId) + 1}</span>
+          <strong>${escapeAttribute(getSlideCardTitle(slideId, index))}</strong>
+        </button>
+      `;
+    }
+
+    function renderPathwayMap() {
+      if (!pathwayMap) return;
+      const pathways = getButtonPathways();
+      pathwayMap.innerHTML = pathways.map(({ hub, choices }) => `
+        <section class="pathway-map-board" data-pathway-hub-id="${escapeAttribute(hub.id)}">
+          <button class="pathway-hub-card" type="button" data-pathway-slide-id="${escapeAttribute(hub.id)}">
+            <span class="pathway-hub-label">Buttons Slide</span>
+            <span class="pathway-hub-question">${escapeAttribute(hub.question || hub.title || 'Choose a path')}</span>
+          </button>
+          <div class="pathway-main-arrows" aria-hidden="true">
+            ${choices.map(() => '<span class="pathway-arrow pathway-arrow-main">↓</span>').join('')}
+          </div>
+          <div class="pathway-branch-grid">
+            ${choices.map((choice, choiceIndex) => {
+              const slidesInPath = getSlidesForButtonPath(choice, choices);
+              return `
+                <section class="pathway-column" data-pathway-branch-id="${escapeAttribute(choice.branchId || '')}">
+                  <button class="pathway-column-title" type="button" data-pathway-slide-id="${escapeAttribute(choice.targetSlideId || hub.id)}">
+                    <span>Button ${choiceIndex + 1}</span>
+                    <strong>${escapeAttribute(choice.branchName || choice.label)}</strong>
+                  </button>
+                  ${slidesInPath.length
+                    ? slidesInPath.map((slideId, slideIndex) => `${slideIndex > 0 ? '<span class="pathway-arrow pathway-arrow-step" aria-hidden="true">↓</span>' : ''}${renderPathwayStepCard(slideId, slideIndex)}`).join('')
+                    : '<div class="pathway-empty-card">Choose where this button starts</div>'}
+                </section>
+              `;
+            }).join('')}
+          </div>
+        </section>
+      `).join('');
+
+      pathwayMap.querySelectorAll('.pathway-hub-card').forEach((button) => {
+        const hub = slideDefinitions.find((slide) => slide.id === button.dataset.pathwaySlideId);
+        button.addEventListener('click', () => {
+          if (hub?.kind === 'custom-buttons') editCustomSlide(hub.id);
+        });
+      });
+
+      pathwayMap.querySelectorAll('.pathway-column-title, .pathway-step-card').forEach((button) => {
+        button.addEventListener('click', () => {
+          const slideId = button.dataset.pathwaySlideId;
+          if (!slideId) return;
+          const slide = slideDefinitions.find((definition) => definition.id === slideId);
+          if (slide?.kind === 'custom-buttons') {
+            editCustomSlide(slide.id);
+          } else {
+            goToSlideId(slideId);
+            editorStatus.textContent = `Previewing ${getSlideCardTitle(slideId)}.`;
+          }
+        });
+      });
+    }
+
     function renderButtonChoiceFields(choices = collectButtonChoices()) {
       const count = getButtonChoiceCount();
       const normalizedChoices = choices.map(normalizeButtonChoice);
@@ -2458,6 +2722,7 @@
     }
 
     function renderEditorCards() {
+      renderPathwayMap();
       editorGrid.innerHTML = '';
       slideOrder.forEach((slideId, index) => {
         editorGrid.appendChild(renderDropIndicators(index));
