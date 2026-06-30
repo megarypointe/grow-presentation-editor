@@ -1138,6 +1138,13 @@
       border: 1px solid rgba(96, 165, 250, 0.16);
       border-radius: 22px;
       background: rgba(96, 165, 250, 0.08);
+      transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .flow-branch-column.flow-drag-over {
+      border-color: rgba(250, 204, 21, 0.75);
+      background: rgba(250, 204, 21, 0.12);
+      box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.1);
     }
 
     .flow-slide-card {
@@ -1639,6 +1646,7 @@
     let slides = [];
     let currentSlide = 0;
     let draggedSlideId = null;
+    let draggedFlowSlideId = null;
     let activePathAssignment = null;
 
 
@@ -2445,9 +2453,46 @@
       return assigned;
     }
 
+    function setFlowDragState(column, isActive) {
+      column?.classList.toggle('flow-drag-over', Boolean(isActive));
+    }
+
+    function getBranchInsertIndex(hubId, branchId) {
+      const pathway = getButtonPathways().find((item) => item.hub.id === hubId);
+      const choice = pathway?.choices.find((item) => item.branchId === branchId);
+      if (!pathway || !choice) return slideOrder.length;
+      const branchSlides = getSlidesForButtonPath(choice, pathway.choices);
+      if (branchSlides.length) {
+        return slideOrder.indexOf(branchSlides[branchSlides.length - 1]) + 1;
+      }
+      const hubIndex = slideOrder.indexOf(hubId);
+      return hubIndex >= 0 ? hubIndex + 1 : slideOrder.length;
+    }
+
+    function moveSlideToPathway(slideId, hubId, branchId) {
+      if (!slideId || slideId === hubId) return false;
+      const pathway = getButtonPathways().find((item) => item.hub.id === hubId);
+      const choice = pathway?.choices.find((item) => item.branchId === branchId);
+      const fromIndex = slideOrder.indexOf(slideId);
+      if (!pathway || !choice || fromIndex < 0) return false;
+
+      let insertIndex = getBranchInsertIndex(hubId, branchId);
+      slideOrder.splice(fromIndex, 1);
+      if (fromIndex < insertIndex) insertIndex -= 1;
+      slideOrder.splice(Math.max(0, Math.min(insertIndex, slideOrder.length)), 0, slideId);
+      if (!choice.targetSlideId) {
+        updateButtonChoiceTarget(hubId, branchId, slideId);
+      }
+      persistSlideOrder();
+      applySlideOrder(slideId);
+      renderEditorCards();
+      editorStatus.textContent = `Moved ${getSlideCardTitle(slideId)} into ${choice.branchName || choice.label}.`;
+      return true;
+    }
+
     function renderPathwayStepCard(slideId, index, kicker = `Slide ${slideOrder.indexOf(slideId) + 1}`) {
       return `
-        <button class="flow-slide-card" type="button" data-pathway-slide-id="${escapeAttribute(slideId)}">
+        <button class="flow-slide-card" type="button" draggable="true" data-pathway-slide-id="${escapeAttribute(slideId)}">
           <span class="flow-card-kicker">${escapeAttribute(kicker)}</span>
           <strong class="flow-card-title">${escapeAttribute(getSlideCardTitle(slideId, index))}</strong>
         </button>
@@ -2472,7 +2517,7 @@
               ${choices.map((choice, choiceIndex) => {
                 const slidesInPath = getSlidesForButtonPath(choice, choices);
                 return `
-                  <section class="flow-branch-column" data-pathway-branch-id="${escapeAttribute(choice.branchId || '')}">
+                  <section class="flow-branch-column" data-pathway-branch-id="${escapeAttribute(choice.branchId || '')}" data-pathway-branch-drop-id="${escapeAttribute(choice.branchId || '')}" data-pathway-hub-id="${escapeAttribute(hub.id)}">
                     <button class="flow-branch-title" type="button" data-pathway-assign-branch-id="${escapeAttribute(choice.branchId || '')}" data-pathway-hub-id="${escapeAttribute(hub.id)}" aria-pressed="${activePathAssignment?.hubId === hub.id && activePathAssignment?.branchId === choice.branchId ? 'true' : 'false'}">
                       <span class="flow-card-kicker">Button ${choiceIndex + 1}</span>
                       <strong class="flow-card-title">${escapeAttribute(choice.branchName || choice.label)}</strong>
@@ -2501,7 +2546,38 @@
         });
       });
 
+      pathwayMap.querySelectorAll('[data-pathway-branch-drop-id]').forEach((column) => {
+        const hubId = column.dataset.pathwayHubId;
+        const branchId = column.dataset.pathwayBranchDropId;
+        column.addEventListener('dragover', (event) => {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          setFlowDragState(column, true);
+        });
+        column.addEventListener('dragleave', (event) => {
+          if (!column.contains(event.relatedTarget)) setFlowDragState(column, false);
+        });
+        column.addEventListener('drop', (event) => {
+          event.preventDefault();
+          setFlowDragState(column, false);
+          const droppedSlideId = event.dataTransfer.getData('text/plain') || draggedFlowSlideId;
+          if (droppedSlideId) moveSlideToPathway(droppedSlideId, hubId, branchId);
+        });
+      });
+
       pathwayMap.querySelectorAll('.flow-slide-card:not(.flow-hub-card)').forEach((button) => {
+        button.addEventListener('dragstart', (event) => {
+          const slideId = button.dataset.pathwaySlideId;
+          draggedFlowSlideId = slideId;
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain', slideId);
+          button.classList.add('dragging');
+        });
+        button.addEventListener('dragend', () => {
+          draggedFlowSlideId = null;
+          button.classList.remove('dragging');
+          pathwayMap.querySelectorAll('.flow-drag-over').forEach((column) => setFlowDragState(column, false));
+        });
         button.addEventListener('click', () => {
           const slideId = button.dataset.pathwaySlideId;
           if (!slideId) return;

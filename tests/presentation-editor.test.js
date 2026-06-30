@@ -262,3 +262,19 @@ test('editor shows normal slides until a button slide creates inline branches in
   assert.doesNotMatch(html, /pathway-hub-label">Buttons Slide/);
   assert.doesNotMatch(html, /background:\s*#020617;\s*color:\s*white;[\s\S]*\.pathway-hub-card/);
 });
+
+test('slides can be dragged into pathway branches instead of only assigned by clicking', () => {
+  assert.match(html, /data-pathway-branch-drop-id/);
+  assert.match(html, /data-pathway-hub-id/);
+  assert.match(html, /draggable="true" data-pathway-slide-id/);
+  assert.match(html, /function moveSlideToPathway\(/);
+  assert.match(html, /function getBranchInsertIndex\(/);
+  assert.match(html, /function setFlowDragState\(/);
+  assert.match(html, /let draggedFlowSlideId/);
+  assert.match(html, /flow-drag-over/);
+  assert.match(html, /dragstart[\s\S]*draggedFlowSlideId = slideId/);
+  assert.match(html, /dragover[\s\S]*event\.preventDefault\(\)/);
+  assert.match(html, /drop[\s\S]*moveSlideToPathway\(droppedSlideId, hubId, branchId\)/);
+  assert.match(html, /updateButtonChoiceTarget\(hubId, branchId, slideId\)/);
+  assert.match(html, /persistSlideOrder\(\)/);
+});
