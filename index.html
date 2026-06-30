@@ -1100,14 +1100,12 @@
 
     .pathway-map {
       display: grid;
-      gap: 18px;
+      gap: 22px;
       margin: 8px 0 22px;
-      padding: clamp(16px, 2.5vw, 28px);
-      border: 1px solid rgba(226, 232, 240, 0.2);
-      border-radius: 28px;
-      background: #ffffff;
-      color: #020617;
-      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+      padding: 18px;
+      border: 1px solid rgba(226, 232, 240, 0.14);
+      border-radius: 24px;
+      background: rgba(15, 23, 42, 0.46);
     }
 
     .pathway-map:empty {
@@ -1116,168 +1114,116 @@
 
     .pathway-map-board {
       display: grid;
-      justify-items: center;
-      gap: 16px;
+      gap: 18px;
     }
 
-    .pathway-hub-card,
-    .pathway-step-card,
-    .pathway-empty-card {
-      border: 0;
-      background: #020617;
-      color: white;
-      font: inherit;
-      font-weight: 900;
-      letter-spacing: -0.03em;
-      box-shadow: none;
+    .flow-linear-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: stretch;
     }
 
-    .pathway-hub-card {
-      width: min(520px, 100%);
-      min-height: 86px;
+    .flow-branch-board {
       display: grid;
-      place-items: center;
-      gap: 4px;
-      padding: 18px 28px;
-      cursor: pointer;
-    }
-
-    .pathway-hub-label {
-      font-size: clamp(1.5rem, 3vw, 2.45rem);
-      line-height: 1;
-    }
-
-    .pathway-hub-question {
-      max-width: 34rem;
-      color: rgba(255, 255, 255, 0.74);
-      font-size: 0.78rem;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
-    }
-
-    .pathway-main-arrows {
-      width: min(980px, 100%);
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      align-items: end;
-      gap: 24px;
-      color: #020617;
-      pointer-events: none;
-    }
-
-    .pathway-arrow {
-      display: grid;
-      place-items: center;
-      color: #020617;
-      font-size: 2.9rem;
-      line-height: 0.72;
-      font-weight: 950;
-    }
-
-    .pathway-arrow-main:nth-child(3n + 1) {
-      transform: rotate(24deg);
-    }
-
-    .pathway-arrow-main:nth-child(3n + 2) {
-      transform: translateY(2px);
-    }
-
-    .pathway-arrow-main:nth-child(3n) {
-      transform: rotate(-24deg);
-    }
-
-    .pathway-branch-grid {
-      width: min(1040px, 100%);
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      gap: clamp(14px, 2.2vw, 30px);
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
       align-items: start;
     }
 
-    .pathway-column {
+    .flow-branch-column {
       display: grid;
       gap: 10px;
-      align-items: start;
+      padding: 12px;
+      border: 1px solid rgba(96, 165, 250, 0.16);
+      border-radius: 22px;
+      background: rgba(96, 165, 250, 0.08);
     }
 
-    .pathway-column-title {
+    .flow-slide-card {
+      width: 220px;
+      min-height: 142px;
       display: grid;
-      gap: 2px;
-      min-height: 68px;
-      padding: 12px 14px;
-      border: 0;
-      background: #020617;
-      color: white;
-      text-align: center;
+      gap: 8px;
+      align-content: start;
+      position: relative;
+      padding: 12px;
+      border: 1px solid rgba(226, 232, 240, 0.2);
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.78);
+      color: #e5e7eb;
+      text-align: left;
       font: inherit;
       cursor: pointer;
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.24);
     }
 
-    .pathway-column-title[aria-pressed="true"] {
-      background: #facc15;
-      color: #020617;
+    .flow-branch-column .flow-slide-card {
+      width: 100%;
     }
 
-    .pathway-column-title[aria-pressed="true"] span {
-      color: rgba(2, 6, 23, 0.62);
+    .flow-hub-card {
+      border-color: rgba(96, 165, 250, 0.5);
+      box-shadow: 0 16px 42px rgba(96, 165, 250, 0.16);
     }
 
-    .pathway-column-title strong {
-      font-size: 1rem;
-      line-height: 1.08;
-      letter-spacing: -0.02em;
-    }
-
-    .pathway-column-title span {
-      color: rgba(255, 255, 255, 0.62);
-      font-size: 0.68rem;
+    .flow-card-kicker {
+      color: #93c5fd;
+      font-size: 0.7rem;
       font-weight: 850;
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
 
-    .pathway-step-card,
-    .pathway-empty-card {
+    .flow-card-title {
+      color: white;
+      font-size: 0.95rem;
+      line-height: 1.12;
+      font-weight: 900;
+      letter-spacing: -0.025em;
+    }
+
+    .flow-branch-title {
+      display: grid;
+      gap: 2px;
       width: 100%;
-      min-height: 76px;
+      min-height: 68px;
+      padding: 12px 14px;
+      border: 1px solid rgba(96, 165, 250, 0.22);
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.72);
+      color: white;
+      text-align: left;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .flow-branch-title[aria-pressed="true"] {
+      border-color: rgba(250, 204, 21, 0.75);
+      background: rgba(250, 204, 21, 0.18);
+      box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.12);
+    }
+
+    .flow-empty-card {
+      width: 100%;
+      min-height: 92px;
       display: grid;
       place-items: center;
       padding: 14px;
+      border: 1px dashed rgba(147, 197, 253, 0.5);
+      border-radius: 16px;
+      color: #bfdbfe;
       text-align: center;
-      cursor: pointer;
-    }
-
-    .pathway-step-card span {
-      display: block;
-      color: rgba(255, 255, 255, 0.58);
-      font-size: 0.68rem;
-      font-weight: 850;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .pathway-step-card strong {
-      display: block;
-      margin-top: 3px;
-      font-size: 0.9rem;
-      line-height: 1.12;
-    }
-
-    .pathway-empty-card {
-      border: 2px dashed #020617;
-      background: white;
-      color: #020617;
       font-size: 0.86rem;
+      font-weight: 750;
     }
 
-    .pathway-hub-card:hover,
-    .pathway-hub-card:focus-visible,
-    .pathway-column-title:hover,
-    .pathway-column-title:focus-visible,
-    .pathway-step-card:hover,
-    .pathway-step-card:focus-visible {
-      outline: 4px solid rgba(2, 6, 23, 0.18);
-      outline-offset: 4px;
+    .flow-slide-card:hover,
+    .flow-slide-card:focus-visible,
+    .flow-branch-title:hover,
+    .flow-branch-title:focus-visible {
+      outline: 2px solid rgba(96, 165, 250, 0.45);
+      outline-offset: 2px;
       transform: translateY(-1px);
     }
 
@@ -2457,6 +2403,11 @@
         }));
     }
 
+    function getSlidesBeforeHub(hubId) {
+      const hubIndex = slideOrder.indexOf(hubId);
+      return slideOrder.slice(0, hubIndex >= 0 ? hubIndex : 0);
+    }
+
     function selectPathAssignment(hubId, branchId) {
       activePathAssignment = { hubId, branchId };
       const choice = customSlides
@@ -2494,11 +2445,11 @@
       return assigned;
     }
 
-    function renderPathwayStepCard(slideId, index) {
+    function renderPathwayStepCard(slideId, index, kicker = `Slide ${slideOrder.indexOf(slideId) + 1}`) {
       return `
-        <button class="pathway-step-card" type="button" data-pathway-slide-id="${escapeAttribute(slideId)}">
-          <span>Slide ${slideOrder.indexOf(slideId) + 1}</span>
-          <strong>${escapeAttribute(getSlideCardTitle(slideId, index))}</strong>
+        <button class="flow-slide-card" type="button" data-pathway-slide-id="${escapeAttribute(slideId)}">
+          <span class="flow-card-kicker">${escapeAttribute(kicker)}</span>
+          <strong class="flow-card-title">${escapeAttribute(getSlideCardTitle(slideId, index))}</strong>
         </button>
       `;
     }
@@ -2506,35 +2457,38 @@
     function renderPathwayMap() {
       if (!pathwayMap) return;
       const pathways = getButtonPathways();
-      pathwayMap.innerHTML = pathways.map(({ hub, choices }) => `
-        <section class="pathway-map-board" data-pathway-hub-id="${escapeAttribute(hub.id)}">
-          <button class="pathway-hub-card" type="button" data-pathway-slide-id="${escapeAttribute(hub.id)}">
-            <span class="pathway-hub-label">Buttons Slide</span>
-            <span class="pathway-hub-question">${escapeAttribute(hub.question || hub.title || 'Choose a path')}</span>
-          </button>
-          <div class="pathway-main-arrows" aria-hidden="true">
-            ${choices.map(() => '<span class="pathway-arrow pathway-arrow-main">↓</span>').join('')}
-          </div>
-          <div class="pathway-branch-grid">
-            ${choices.map((choice, choiceIndex) => {
-              const slidesInPath = getSlidesForButtonPath(choice, choices);
-              return `
-                <section class="pathway-column" data-pathway-branch-id="${escapeAttribute(choice.branchId || '')}">
-                  <button class="pathway-column-title" type="button" data-pathway-assign-branch-id="${escapeAttribute(choice.branchId || '')}" data-pathway-hub-id="${escapeAttribute(hub.id)}" aria-pressed="${activePathAssignment?.hubId === hub.id && activePathAssignment?.branchId === choice.branchId ? 'true' : 'false'}">
-                    <span>Button ${choiceIndex + 1}</span>
-                    <strong>${escapeAttribute(choice.branchName || choice.label)}</strong>
-                  </button>
-                  ${slidesInPath.length
-                    ? slidesInPath.map((slideId, slideIndex) => `${slideIndex > 0 ? '<span class="pathway-arrow pathway-arrow-step" aria-hidden="true">↓</span>' : ''}${renderPathwayStepCard(slideId, slideIndex)}`).join('')
-                    : '<div class="pathway-empty-card">Click a path, then click a slide below</div>'}
-                </section>
-              `;
-            }).join('')}
-          </div>
-        </section>
-      `).join('');
+      pathwayMap.innerHTML = pathways.map(({ hub, choices }) => {
+        const normalSlides = getSlidesBeforeHub(hub.id);
+        return `
+          <section class="pathway-map-board" data-pathway-hub-id="${escapeAttribute(hub.id)}">
+            <div class="flow-linear-row" aria-label="Normal slides before this button slide">
+              ${normalSlides.map((slideId, index) => renderPathwayStepCard(slideId, index)).join('')}
+              <button class="flow-slide-card flow-hub-card" type="button" data-pathway-slide-id="${escapeAttribute(hub.id)}">
+                <span class="flow-card-kicker">Button slide</span>
+                <strong class="flow-card-title">${escapeAttribute(hub.question || hub.title || 'Choose a path')}</strong>
+              </button>
+            </div>
+            <div class="flow-branch-board">
+              ${choices.map((choice, choiceIndex) => {
+                const slidesInPath = getSlidesForButtonPath(choice, choices);
+                return `
+                  <section class="flow-branch-column" data-pathway-branch-id="${escapeAttribute(choice.branchId || '')}">
+                    <button class="flow-branch-title" type="button" data-pathway-assign-branch-id="${escapeAttribute(choice.branchId || '')}" data-pathway-hub-id="${escapeAttribute(hub.id)}" aria-pressed="${activePathAssignment?.hubId === hub.id && activePathAssignment?.branchId === choice.branchId ? 'true' : 'false'}">
+                      <span class="flow-card-kicker">Button ${choiceIndex + 1}</span>
+                      <strong class="flow-card-title">${escapeAttribute(choice.branchName || choice.label)}</strong>
+                    </button>
+                    ${slidesInPath.length
+                      ? slidesInPath.map((slideId, slideIndex) => renderPathwayStepCard(slideId, slideIndex)).join('')
+                      : '<div class="flow-empty-card">Click this path, then click a slide below to start it.</div>'}
+                  </section>
+                `;
+              }).join('')}
+            </div>
+          </section>
+        `;
+      }).join('');
 
-      pathwayMap.querySelectorAll('.pathway-hub-card').forEach((button) => {
+      pathwayMap.querySelectorAll('.flow-hub-card').forEach((button) => {
         const hub = slideDefinitions.find((slide) => slide.id === button.dataset.pathwaySlideId);
         button.addEventListener('click', () => {
           if (hub?.kind === 'custom-buttons') editCustomSlide(hub.id);
@@ -2547,10 +2501,14 @@
         });
       });
 
-      pathwayMap.querySelectorAll('.pathway-step-card').forEach((button) => {
+      pathwayMap.querySelectorAll('.flow-slide-card:not(.flow-hub-card)').forEach((button) => {
         button.addEventListener('click', () => {
           const slideId = button.dataset.pathwaySlideId;
           if (!slideId) return;
+          if (activePathAssignment) {
+            assignPathStart(slideId);
+            return;
+          }
           goToSlideId(slideId);
           editorStatus.textContent = `Previewing ${getSlideCardTitle(slideId)}.`;
         });
@@ -2761,8 +2719,11 @@
     }
 
     function renderEditorCards() {
+      const hasPathways = getButtonPathways().length > 0;
       renderPathwayMap();
+      editorGrid.hidden = hasPathways;
       editorGrid.innerHTML = '';
+      if (hasPathways) return;
       slideOrder.forEach((slideId, index) => {
         editorGrid.appendChild(renderDropIndicators(index));
         const definition = slideDefinitions.find((slide) => slide.id === slideId);

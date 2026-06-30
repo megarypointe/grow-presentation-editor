@@ -242,21 +242,23 @@ test('button decisions create named branches that are assigned visually from the
   assert.match(html, /card\.classList\.toggle\('branch-start'/);
 });
 
-test('editor shows button slides as a hub-and-pathway visual map instead of only a flat slide row', () => {
+test('editor shows normal slides until a button slide creates inline branches in the existing UI style', () => {
   assert.match(html, /id="pathwayMap"/);
   assert.match(html, /class="pathway-map"/);
-  assert.match(html, /class="pathway-hub-card"/);
-  assert.match(html, /Buttons Slide/);
-  assert.match(html, /class="pathway-branch-grid"/);
-  assert.match(html, /class="pathway-column"/);
-  assert.match(html, /class="pathway-arrow pathway-arrow-main"/);
-  assert.match(html, /class="pathway-arrow pathway-arrow-step"/);
+  assert.match(html, /class="flow-linear-row"/);
+  assert.match(html, /class="flow-branch-board"/);
+  assert.match(html, /class="flow-branch-column"/);
+  assert.match(html, /class="flow-slide-card/);
+  assert.match(html, /class="flow-slide-card flow-hub-card/);
   assert.match(html, /function renderPathwayMap\(/);
   assert.match(html, /function getButtonPathways\(/);
+  assert.match(html, /function getSlidesBeforeHub\(/);
   assert.match(html, /function getSlidesForButtonPath\(/);
   assert.match(html, /pathwayMap\.innerHTML/);
   assert.match(html, /data-pathway-branch-id/);
   assert.match(html, /data-pathway-slide-id/);
   assert.match(html, /editCustomSlide\(hub\.id\)/);
-  assert.match(html, /goToSlideId\(slideId\)/);
+  assert.match(html, /assignPathStart\(slideId\)/);
+  assert.doesNotMatch(html, /pathway-hub-label">Buttons Slide/);
+  assert.doesNotMatch(html, /background:\s*#020617;\s*color:\s*white;[\s\S]*\.pathway-hub-card/);
 });
