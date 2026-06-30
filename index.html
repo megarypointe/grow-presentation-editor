@@ -1092,6 +1092,12 @@
       box-shadow: 0 16px 42px rgba(34, 197, 94, 0.12);
     }
 
+    .slide-card.path-assignment-target {
+      border-color: rgba(250, 204, 21, 0.88);
+      box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.2), 0 18px 46px rgba(250, 204, 21, 0.18);
+      cursor: copy;
+    }
+
     .pathway-map {
       display: grid;
       gap: 18px;
@@ -1205,6 +1211,15 @@
       text-align: center;
       font: inherit;
       cursor: pointer;
+    }
+
+    .pathway-column-title[aria-pressed="true"] {
+      background: #facc15;
+      color: #020617;
+    }
+
+    .pathway-column-title[aria-pressed="true"] span {
+      color: rgba(2, 6, 23, 0.62);
     }
 
     .pathway-column-title strong {
@@ -1678,6 +1693,7 @@
     let slides = [];
     let currentSlide = 0;
     let draggedSlideId = null;
+    let activePathAssignment = null;
 
 
     function buildSlideElement(definition, index) {
@@ -2415,18 +2431,6 @@
         .map((choice) => choice.branchName || choice.label);
     }
 
-    function getSlidePathOptions(selectedSlideId = '') {
-      return [
-        '<option value="">Continue normally</option>',
-        ...slideOrder.map((slideId, index) => {
-          const definition = slideDefinitions.find((slide) => slide.id === slideId);
-          const label = definition?.title || definition?.question || `Slide ${index + 1}`;
-          const selected = slideId === selectedSlideId ? ' selected' : '';
-          return `<option value="${escapeAttribute(slideId)}"${selected}>Go to ${index + 1}: ${escapeAttribute(label)}</option>`;
-        })
-      ].join('');
-    }
-
     function getSlideCardTitle(slideId, fallbackIndex = 0) {
       const definition = slideDefinitions.find((slide) => slide.id === slideId);
       return definition?.title || definition?.question || `Slide ${fallbackIndex + 1}`;
@@ -2451,6 +2455,43 @@
           hub,
           choices: (hub.choices || []).map((choice, index) => ensureButtonChoiceBranch(choice, index, hub.id))
         }));
+    }
+
+    function selectPathAssignment(hubId, branchId) {
+      activePathAssignment = { hubId, branchId };
+      const choice = customSlides
+        .find((slide) => slide.id === hubId && slide.kind === 'custom-buttons')
+        ?.choices?.map(normalizeButtonChoice)
+        .find((item) => item.branchId === branchId);
+      editorStatus.textContent = choice
+        ? `Click a slide below to start “${choice.branchName || choice.label}”.`
+        : 'Click a path, then click a slide below to set where it starts.';
+      renderPathwayMap();
+      renderEditorCards();
+    }
+
+    function updateButtonChoiceTarget(hubId, branchId, slideId) {
+      const hub = customSlides.find((slide) => slide.id === hubId && slide.kind === 'custom-buttons');
+      if (!hub) return false;
+      hub.choices = (hub.choices || []).map((choice, index) => {
+        const normalized = ensureButtonChoiceBranch(choice, index, hub.id);
+        return normalized.branchId === branchId ? { ...normalized, targetSlideId: slideId } : normalized;
+      });
+      saveCustomSlides();
+      replaceSlideElement(hub.id);
+      return true;
+    }
+
+    function assignPathStart(slideId) {
+      if (!activePathAssignment) return false;
+      const assigned = updateButtonChoiceTarget(activePathAssignment.hubId, activePathAssignment.branchId, slideId);
+      if (assigned) {
+        const label = getSlideCardTitle(slideId);
+        activePathAssignment = null;
+        editorStatus.textContent = `Path now starts at ${label}.`;
+        renderEditorCards();
+      }
+      return assigned;
     }
 
     function renderPathwayStepCard(slideId, index) {
@@ -2479,13 +2520,13 @@
               const slidesInPath = getSlidesForButtonPath(choice, choices);
               return `
                 <section class="pathway-column" data-pathway-branch-id="${escapeAttribute(choice.branchId || '')}">
-                  <button class="pathway-column-title" type="button" data-pathway-slide-id="${escapeAttribute(choice.targetSlideId || hub.id)}">
+                  <button class="pathway-column-title" type="button" data-pathway-assign-branch-id="${escapeAttribute(choice.branchId || '')}" data-pathway-hub-id="${escapeAttribute(hub.id)}" aria-pressed="${activePathAssignment?.hubId === hub.id && activePathAssignment?.branchId === choice.branchId ? 'true' : 'false'}">
                     <span>Button ${choiceIndex + 1}</span>
                     <strong>${escapeAttribute(choice.branchName || choice.label)}</strong>
                   </button>
                   ${slidesInPath.length
                     ? slidesInPath.map((slideId, slideIndex) => `${slideIndex > 0 ? '<span class="pathway-arrow pathway-arrow-step" aria-hidden="true">↓</span>' : ''}${renderPathwayStepCard(slideId, slideIndex)}`).join('')
-                    : '<div class="pathway-empty-card">Choose where this button starts</div>'}
+                    : '<div class="pathway-empty-card">Click a path, then click a slide below</div>'}
                 </section>
               `;
             }).join('')}
@@ -2500,17 +2541,18 @@
         });
       });
 
-      pathwayMap.querySelectorAll('.pathway-column-title, .pathway-step-card').forEach((button) => {
+      pathwayMap.querySelectorAll('[data-pathway-assign-branch-id]').forEach((button) => {
+        button.addEventListener('click', () => {
+          selectPathAssignment(button.dataset.pathwayHubId, button.dataset.pathwayAssignBranchId);
+        });
+      });
+
+      pathwayMap.querySelectorAll('.pathway-step-card').forEach((button) => {
         button.addEventListener('click', () => {
           const slideId = button.dataset.pathwaySlideId;
           if (!slideId) return;
-          const slide = slideDefinitions.find((definition) => definition.id === slideId);
-          if (slide?.kind === 'custom-buttons') {
-            editCustomSlide(slide.id);
-          } else {
-            goToSlideId(slideId);
-            editorStatus.textContent = `Previewing ${getSlideCardTitle(slideId)}.`;
-          }
+          goToSlideId(slideId);
+          editorStatus.textContent = `Previewing ${getSlideCardTitle(slideId)}.`;
         });
       });
     }
@@ -2530,10 +2572,7 @@
               Branch name
               <input type="text" data-button-branch-index="${index}" value="${escapeAttribute(choice.branchName || choice.label)}" placeholder="Branch ${index + 1}" />
               <input type="hidden" data-button-branch-id-index="${index}" value="${escapeAttribute(choice.branchId || '')}" />
-            </label>
-            <label>
-              Branch starts at Button ${index + 1}
-              <select data-button-target-index="${index}" aria-label="Branch starts at button ${index + 1}">${getSlidePathOptions(choice.targetSlideId)}</select>
+              <input type="hidden" data-button-target-id-index="${index}" value="${escapeAttribute(choice.targetSlideId || '')}" />
             </label>
           </div>
         `;
@@ -2543,12 +2582,12 @@
     function collectButtonChoices() {
       return [...buttonChoiceFields.querySelectorAll('[data-button-choice-index]')]
         .map((input, index) => {
-          const targetSelect = buttonChoiceFields.querySelector(`[data-button-target-index="${index}"]`);
+          const targetInput = buttonChoiceFields.querySelector(`[data-button-target-id-index="${index}"]`);
           const branchInput = buttonChoiceFields.querySelector(`[data-button-branch-index="${index}"]`);
           const branchIdInput = buttonChoiceFields.querySelector(`[data-button-branch-id-index="${index}"]`);
           return {
             label: input.value.trim() || `Button ${index + 1}`,
-            targetSlideId: targetSelect?.value || '',
+            targetSlideId: targetInput?.value || '',
             branchId: branchIdInput?.value || '',
             branchName: branchInput?.value.trim() || input.value.trim() || `Branch ${index + 1}`
           };
@@ -2736,6 +2775,7 @@
         const canDelete = true;
         const branchStartLabels = getBranchStartLabels(slideId);
         card.classList.toggle('branch-start', branchStartLabels.length > 0);
+        card.classList.toggle('path-assignment-target', Boolean(activePathAssignment));
         card.innerHTML = `
           <div class="slide-card-preview">
             ${definition.kind === 'image'
@@ -2786,6 +2826,14 @@
           const droppedSlideId = event.dataTransfer.getData('text/plain') || draggedSlideId;
           if (droppedSlideId) {
             moveSlide(droppedSlideId, getDropIndexFromPointer(card, event, index));
+          }
+        });
+
+        card.addEventListener('click', (event) => {
+          if (event.target.closest('.card-menu-button, .card-menu')) return;
+          if (activePathAssignment) {
+            event.preventDefault();
+            assignPathStart(slideId);
           }
         });
 

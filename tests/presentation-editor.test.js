@@ -203,10 +203,11 @@ test('editor can add slider-question, button-choice, and media slides from hidde
   assert.match(html, /createMediaSlide\(file\)/);
 });
 
-test('button slides can route each choice to a custom slide path', () => {
-  assert.match(html, /data-button-target-index/);
-  assert.match(html, />Continue normally<\/option>/);
-  assert.match(html, /function getSlidePathOptions\(/);
+test('button slides can route each choice to a custom slide path without a dropdown selector', () => {
+  assert.doesNotMatch(html, /data-button-target-index/);
+  assert.doesNotMatch(html, />Continue normally<\/option>/);
+  assert.doesNotMatch(html, /function getSlidePathOptions\(/);
+  assert.doesNotMatch(html, /<select[^>]*Branch starts/);
   assert.match(html, /function normalizeButtonChoice\(/);
   assert.match(html, /function getButtonChoiceLabel\(/);
   assert.match(html, /function goToSlideId\(/);
@@ -218,14 +219,22 @@ test('button slides can route each choice to a custom slide path', () => {
   assert.match(html, /populateButtonChoiceFields\(definition\.choices \|\| \[\]\)/);
 });
 
-test('button decisions create named branches that are visible in the editor', () => {
+test('button decisions create named branches that are assigned visually from the pathway map', () => {
   assert.match(html, /data-button-branch-index/);
   assert.match(html, /Branch name/);
-  assert.match(html, /Branch starts at/);
+  assert.doesNotMatch(html, /Branch starts at/);
   assert.match(html, /branchId/);
   assert.match(html, /branchName/);
+  assert.match(html, /let activePathAssignment/);
   assert.match(html, /function ensureButtonChoiceBranch\(/);
   assert.match(html, /function getBranchStartLabels\(/);
+  assert.match(html, /function selectPathAssignment\(/);
+  assert.match(html, /function assignPathStart\(/);
+  assert.match(html, /function updateButtonChoiceTarget\(/);
+  assert.match(html, /data-pathway-assign-branch-id/);
+  assert.match(html, /Click a path, then click a slide below/);
+  assert.match(html, /card\.classList\.toggle\('path-assignment-target'/);
+  assert.match(html, /card\.addEventListener\('click'[\s\S]*assignPathStart\(slideId\)/);
   assert.match(html, /data-branch-id="\$\{escapeAttribute\(choice\.branchId \|\| ''\)\}"/);
   assert.match(html, /data-branch-name="\$\{escapeAttribute\(choice\.branchName \|\| ''\)\}"/);
   assert.match(html, /class="branch-badge"/);
