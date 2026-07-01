@@ -279,3 +279,25 @@ test('slides can be dragged into pathway branches instead of only assigned by cl
   assert.match(html, /updateButtonChoiceTarget\(hubId, branchId, slideId\)/);
   assert.match(html, /persistSlideOrder\(\)/);
 });
+
+test('pathway drops show exact above-or-below insertion targets and keep columns slide-width', () => {
+  assert.match(html, /\.flow-branch-board\s*{[\s\S]*?display:\s*flex/);
+  assert.match(html, /\.flow-branch-column\s*{[\s\S]*?width:\s*220px/);
+  assert.doesNotMatch(html, /\.flow-branch-board\s*{[\s\S]*?grid-template-columns:\s*repeat\(auto-fit, minmax\(220px, 1fr\)\)/);
+  assert.doesNotMatch(html, /\.flow-branch-column \.flow-slide-card\s*{[\s\S]*?width:\s*100%/);
+  assert.match(html, /function getFlowDropPlacement\(/);
+  assert.match(html, /function setFlowDropIndicator\(/);
+  assert.match(html, /function clearFlowDropIndicators\(/);
+  assert.match(html, /flow-insert-before/);
+  assert.match(html, /flow-insert-after/);
+  assert.match(html, /dragover[\s\S]*setFlowDropIndicator\(button, getFlowDropPlacement\(button, event\)\)/);
+  assert.match(html, /drop[\s\S]*const targetSlideId = button\.dataset\.pathwaySlideId;[\s\S]*const placement = getFlowDropPlacement\(button, event\);[\s\S]*moveSlideToPathway\(droppedSlideId, hubId, branchId, targetSlideId, placement\)/);
+});
+
+test('every pathway slide card includes a visible thumbnail preview', () => {
+  assert.match(html, /class="flow-card-thumbnail"/);
+  assert.match(html, /function renderPathwayStepCard[\s\S]*const definition = slideDefinitions\.find/);
+  assert.match(html, /<figure class="flow-card-thumbnail">\$\{renderThumbnail\(definition\)\}<\/figure>/);
+  assert.match(html, /flow-hub-card[\s\S]*<figure class="flow-card-thumbnail">\$\{renderThumbnail\(hub\)\}<\/figure>/);
+  assert.match(html, /\.flow-card-thumbnail\s*{[\s\S]*?aspect-ratio:\s*16 \/ 9/);
+});
