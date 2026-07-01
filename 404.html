@@ -1232,18 +1232,32 @@
     }
 
     .flow-branch-title {
-      display: grid;
-      gap: 2px;
       width: 100%;
-      min-height: 68px;
-      padding: 12px 14px;
+      padding: 10px 12px;
       border: 1px solid rgba(96, 165, 250, 0.22);
       border-radius: 16px;
       background: rgba(15, 23, 42, 0.72);
+    }
+
+    .flow-branch-title-input {
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 4px 6px;
+      background: transparent;
       color: white;
-      text-align: left;
       font: inherit;
-      cursor: pointer;
+      font-size: 0.95rem;
+      line-height: 1.15;
+      font-weight: 900;
+      letter-spacing: -0.025em;
+      outline: none;
+    }
+
+    .flow-branch-title-input:hover,
+    .flow-branch-title-input:focus {
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
     }
 
     .flow-empty-card {
@@ -2411,6 +2425,25 @@
       return normalizeButtonChoice(choice, index).label;
     }
 
+    function getPathwayTitle(choice, index = 0) {
+      const normalized = normalizeButtonChoice(choice, index);
+      return normalized.branchName?.trim() || normalized.label;
+    }
+
+    function updateButtonChoiceBranchName(hubId, branchId, title) {
+      const hub = customSlides.find((slide) => slide.id === hubId && slide.kind === 'custom-buttons');
+      if (!hub) return false;
+      hub.choices = (hub.choices || []).map((choice, index) => {
+        const normalized = ensureButtonChoiceBranch(choice, index, hub.id);
+        if (normalized.branchId !== branchId) return normalized;
+        return { ...normalized, branchName: title.trim() || normalized.label };
+      });
+      saveCustomSlides();
+      renderEditorCards();
+      editorStatus.textContent = 'Saved pathway title.';
+      return true;
+    }
+
     function getBranchStartLabels(slideId) {
       return customSlides
         .filter((slide) => slide.kind === 'custom-buttons')
@@ -2548,10 +2581,10 @@
                 const slidesInPath = getSlidesForButtonPath(choice, choices);
                 return `
                   <section class="flow-branch-column" data-pathway-branch-id="${escapeAttribute(choice.branchId || '')}" data-pathway-branch-drop-id="${escapeAttribute(choice.branchId || '')}" data-pathway-hub-id="${escapeAttribute(hub.id)}">
-                    <div class="flow-branch-title">
-                      <span class="flow-card-kicker">Button ${choiceIndex + 1}</span>
-                      <strong class="flow-card-title">${escapeAttribute(choice.branchName || choice.label)}</strong>
-                    </div>
+                    <label class="flow-branch-title">
+                      <span class="sr-only">Pathway title for ${escapeAttribute(choice.label)}</span>
+                      <input class="flow-branch-title-input" type="text" value="${escapeAttribute(getPathwayTitle(choice))}" data-pathway-title-hub-id="${escapeAttribute(hub.id)}" data-pathway-title-branch-id="${escapeAttribute(choice.branchId || '')}" aria-label="Pathway title for ${escapeAttribute(choice.label)}" />
+                    </label>
                     ${slidesInPath.length
                       ? slidesInPath.map((slideId, slideIndex) => renderPathwayStepCard(slideId, slideIndex)).join('')
                       : '<div class="flow-empty-card">Drop slides here</div>'}
@@ -2592,6 +2625,24 @@
           const droppedSlideId = event.dataTransfer.getData('text/plain') || draggedFlowSlideId;
           if (droppedSlideId) moveSlideToPathway(droppedSlideId, hubId, branchId);
         });
+      });
+
+      pathwayMap.querySelectorAll('.flow-branch-title-input').forEach((input) => {
+        const hubId = input.dataset.pathwayTitleHubId;
+        const branchId = input.dataset.pathwayTitleBranchId;
+        input.addEventListener('click', (event) => event.stopPropagation());
+        input.addEventListener('dragstart', (event) => event.preventDefault());
+        input.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            input.blur();
+          }
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            renderEditorCards();
+          }
+        });
+        input.addEventListener('change', () => updateButtonChoiceBranchName(hubId, branchId, input.value));
       });
 
       pathwayMap.querySelectorAll('.flow-slide-card:not(.flow-hub-card)').forEach((button) => {

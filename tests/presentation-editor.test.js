@@ -307,6 +307,19 @@ test('every pathway slide card is thumbnail-only to prevent crowded overlap', ()
   assert.doesNotMatch(html, /flow-hub-card[\s\S]*<strong class="flow-card-title">\$\{escapeAttribute\(hub\.question \|\| hub\.title \|\| 'Choose a path'\)\}<\/strong>/);
 });
 
+test('pathway titles use only button text and can be edited inline', () => {
+  assert.match(html, /class="flow-branch-title-input"/);
+  assert.match(html, /value="\$\{escapeAttribute\(getPathwayTitle\(choice\)\)\}"/);
+  assert.match(html, /function getPathwayTitle\(/);
+  assert.match(html, /function updateButtonChoiceBranchName\(/);
+  assert.match(html, /data-pathway-title-branch-id/);
+  assert.match(html, /data-pathway-title-hub-id/);
+  assert.match(html, /change[\s\S]*updateButtonChoiceBranchName\(hubId, branchId, input\.value\)/);
+  assert.match(html, /keydown[\s\S]*event\.key === 'Enter'[\s\S]*input\.blur\(\)/);
+  assert.doesNotMatch(html, /<span class="flow-card-kicker">Button \$\{choiceIndex \+ 1\}<\/span>/);
+  assert.doesNotMatch(html, /<strong class="flow-card-title">\$\{escapeAttribute\(choice\.branchName \|\| choice\.label\)\}<\/strong>/);
+});
+
 test('editor background stays continuous while scrolling', () => {
   assert.match(html, /body\s*{[\s\S]*?background-repeat:\s*no-repeat/);
   assert.match(html, /body\s*{[\s\S]*?background-attachment:\s*fixed/);
