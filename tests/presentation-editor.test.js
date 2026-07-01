@@ -294,10 +294,21 @@ test('pathway drops show exact above-or-below insertion targets and keep columns
   assert.match(html, /drop[\s\S]*const targetSlideId = button\.dataset\.pathwaySlideId;[\s\S]*const placement = getFlowDropPlacement\(button, event\);[\s\S]*moveSlideToPathway\(droppedSlideId, hubId, branchId, targetSlideId, placement\)/);
 });
 
-test('every pathway slide card includes a visible thumbnail preview', () => {
+test('every pathway slide card is thumbnail-only to prevent crowded overlap', () => {
   assert.match(html, /class="flow-card-thumbnail"/);
   assert.match(html, /function renderPathwayStepCard[\s\S]*const definition = slideDefinitions\.find/);
   assert.match(html, /<figure class="flow-card-thumbnail">\$\{renderThumbnail\(definition\)\}<\/figure>/);
   assert.match(html, /flow-hub-card[\s\S]*<figure class="flow-card-thumbnail">\$\{renderThumbnail\(hub\)\}<\/figure>/);
   assert.match(html, /\.flow-card-thumbnail\s*{[\s\S]*?aspect-ratio:\s*16 \/ 9/);
+  assert.match(html, /\.flow-slide-card\s*{[\s\S]*?min-height:\s*0/);
+  assert.doesNotMatch(html, /renderPathwayStepCard[\s\S]*<span class="flow-card-kicker">\$\{escapeAttribute\(kicker\)\}<\/span>/);
+  assert.doesNotMatch(html, /renderPathwayStepCard[\s\S]*<strong class="flow-card-title">\$\{escapeAttribute\(getSlideCardTitle\(slideId, index\)\)\}<\/strong>/);
+  assert.doesNotMatch(html, /flow-hub-card[\s\S]*<span class="flow-card-kicker">Button slide<\/span>/);
+  assert.doesNotMatch(html, /flow-hub-card[\s\S]*<strong class="flow-card-title">\$\{escapeAttribute\(hub\.question \|\| hub\.title \|\| 'Choose a path'\)\}<\/strong>/);
+});
+
+test('editor background stays continuous while scrolling', () => {
+  assert.match(html, /body\s*{[\s\S]*?background-repeat:\s*no-repeat/);
+  assert.match(html, /body\s*{[\s\S]*?background-attachment:\s*fixed/);
+  assert.match(html, /body\s*{[\s\S]*?background-size:\s*cover/);
 });

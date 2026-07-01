@@ -32,6 +32,9 @@
         radial-gradient(circle at 12% 0%, rgba(59, 130, 246, 0.24), transparent 34rem),
         radial-gradient(circle at 92% 12%, rgba(168, 85, 247, 0.18), transparent 28rem),
         var(--bg);
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      background-size: cover;
     }
 
     body.editor-open {
@@ -1145,12 +1148,10 @@
 
     .flow-slide-card {
       width: 220px;
-      min-height: 142px;
+      min-height: 0;
       display: grid;
-      gap: 8px;
-      align-content: start;
       position: relative;
-      padding: 12px;
+      padding: 8px;
       border: 1px solid rgba(226, 232, 240, 0.2);
       border-radius: 18px;
       background: rgba(15, 23, 42, 0.78);
@@ -2523,10 +2524,8 @@
     function renderPathwayStepCard(slideId, index, kicker = `Slide ${slideOrder.indexOf(slideId) + 1}`) {
       const definition = slideDefinitions.find((slide) => slide.id === slideId);
       return `
-        <button class="flow-slide-card" type="button" draggable="true" data-pathway-slide-id="${escapeAttribute(slideId)}">
+        <button class="flow-slide-card" type="button" draggable="true" data-pathway-slide-id="${escapeAttribute(slideId)}" aria-label="${escapeAttribute(getSlideCardTitle(slideId, index))}">
           <figure class="flow-card-thumbnail">${renderThumbnail(definition)}</figure>
-          <span class="flow-card-kicker">${escapeAttribute(kicker)}</span>
-          <strong class="flow-card-title">${escapeAttribute(getSlideCardTitle(slideId, index))}</strong>
         </button>
       `;
     }
@@ -2540,10 +2539,8 @@
           <section class="pathway-map-board" data-pathway-hub-id="${escapeAttribute(hub.id)}">
             <div class="flow-linear-row" aria-label="Normal slides before this button slide">
               ${normalSlides.map((slideId, index) => renderPathwayStepCard(slideId, index)).join('')}
-              <button class="flow-slide-card flow-hub-card" type="button" data-pathway-slide-id="${escapeAttribute(hub.id)}">
+              <button class="flow-slide-card flow-hub-card" type="button" data-pathway-slide-id="${escapeAttribute(hub.id)}" aria-label="${escapeAttribute(hub.question || hub.title || 'Choose a path')}">
                 <figure class="flow-card-thumbnail">${renderThumbnail(hub)}</figure>
-                <span class="flow-card-kicker">Button slide</span>
-                <strong class="flow-card-title">${escapeAttribute(hub.question || hub.title || 'Choose a path')}</strong>
               </button>
             </div>
             <div class="flow-branch-board">
