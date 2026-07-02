@@ -1603,7 +1603,7 @@
           </form>
           <form class="editor-tool tool-panel" id="addMediaForm" hidden>
             <h3>Add media slide</h3>
-            <input id="mediaFileInput" type="file" required />
+            <input id="mediaFileInput" type="file" accept="image/*,video/*" required />
             <button class="tool-button" type="submit">Upload Slide</button>
           </form>
         </div>
@@ -2356,12 +2356,12 @@
       defaultSlideOrder = slideDefinitions.map((slide) => slide.id);
     }
 
-    function registerCustomSlide(definition) {
+    function registerCustomSlide(definition, insertIndex = slideOrder.length) {
       customSlides.push(definition);
       refreshSlideDefinitions();
       saveCustomSlides();
       slideElementsById.set(definition.id, buildSlideElement(definition, slideDefinitions.length - 1));
-      slideOrder.push(definition.id);
+      slideOrder.splice(Math.max(0, Math.min(insertIndex, slideOrder.length)), 0, definition.id);
       persistSlideOrder();
       applySlideOrder(definition.id);
       renderEditorCards();
@@ -2885,6 +2885,14 @@
       replaceSlideElement(slideId);
     }
 
+    function getDroppedMediaFile(event) {
+      return [...(event.dataTransfer.files || [])].find((file) => file.type.startsWith('image/') || file.type.startsWith('video/')) || null;
+    }
+
+    function hasDroppedMediaFile(event) {
+      return Boolean(getDroppedMediaFile(event));
+    }
+
     function getMediaKind(file) {
       if (file.type.startsWith('image/')) return 'media-image';
       if (file.type.startsWith('video/')) return 'media-video';
@@ -2892,7 +2900,7 @@
       return 'media-embed';
     }
 
-    function createMediaSlide(file) {
+    function createMediaSlide(file, insertIndex = slideOrder.length) {
       const kind = getMediaKind(file);
       const reader = new FileReader();
       reader.addEventListener('load', () => {
@@ -2904,7 +2912,7 @@
           dataUrl: reader.result
         };
         try {
-          registerCustomSlide(definition);
+          registerCustomSlide(definition, insertIndex);
         } catch (error) {
           editorStatus.textContent = 'That file is too large to save in this browser. Try a smaller file.';
         }
@@ -2938,15 +2946,22 @@
       indicator.className = 'drop-indicator';
       indicator.dataset.dropIndex = dropIndex;
       indicator.setAttribute('aria-hidden', 'true');
+      indicator.setAttribute('aria-label', 'Drop image or video here to add a slide');
 
       indicator.addEventListener('dragover', (event) => {
         event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
+        event.dataTransfer.dropEffect = hasDroppedMediaFile(event) ? 'copy' : 'move';
         setActiveDropIndicator(dropIndex);
       });
 
       indicator.addEventListener('drop', (event) => {
         event.preventDefault();
+        const droppedFile = getDroppedMediaFile(event);
+        if (event.dataTransfer.files?.length && droppedFile) {
+          createMediaSlide(droppedFile, dropIndex);
+          clearActiveDropIndicator();
+          return;
+        }
         const droppedSlideId = event.dataTransfer.getData('text/plain') || draggedSlideId;
         if (droppedSlideId) {
           moveSlide(droppedSlideId, dropIndex);
@@ -3027,12 +3042,18 @@
 
         card.addEventListener('dragover', (event) => {
           event.preventDefault();
-          event.dataTransfer.dropEffect = 'move';
+          event.dataTransfer.dropEffect = hasDroppedMediaFile(event) ? 'copy' : 'move';
           setActiveDropIndicator(getDropIndexFromPointer(card, event, index));
         });
 
         card.addEventListener('drop', (event) => {
           event.preventDefault();
+          const droppedFile = getDroppedMediaFile(event);
+          if (droppedFile) {
+            createMediaSlide(droppedFile, getDropIndexFromPointer(card, event, index));
+            clearActiveDropIndicator();
+            return;
+          }
           const droppedSlideId = event.dataTransfer.getData('text/plain') || draggedSlideId;
           if (droppedSlideId) {
             moveSlide(droppedSlideId, getDropIndexFromPointer(card, event, index));

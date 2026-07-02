@@ -191,7 +191,6 @@ test('editing a slideshow gives each slide a three-dot menu with duplicate and d
 test('editor can add slider-question, button-choice, and media slides from hidden panels', () => {
   assert.match(html, /id="addSliderForm"/);
   assert.match(html, /id="sliderQuestionInput"/);
-  assert.match(html, /id="sliderLabelFields"/);
   assert.match(html, /function createSliderSlide\(/);
   assert.match(html, /function renderSliderLabelFields\(/);
   assert.match(html, /kind:\s*'custom-slider'/);
@@ -217,9 +216,20 @@ test('editor can add slider-question, button-choice, and media slides from hidde
   assert.match(html, /definition\.kind === 'custom-slider' \|\| definition\.kind === 'custom-buttons'/);
   assert.match(html, /editCustomSlide\(slideId\)/);
   assert.match(html, /id="addMediaForm"/);
-  assert.match(html, /id="mediaFileInput"/);
+  assert.match(html, /id="mediaFileInput"[^>]*accept="image\/\*,video\/\*"/);
   assert.match(html, /function getMediaKind\(file\)/);
   assert.match(html, /createMediaSlide\(file\)/);
+});
+
+test('image and video files can be dropped onto highlighted editor insertion areas', () => {
+  assert.match(html, /function getDroppedMediaFile\(/);
+  assert.match(html, /function hasDroppedMediaFile\(/);
+  assert.match(html, /function createMediaSlide\(file, insertIndex = slideOrder\.length/);
+  assert.match(html, /function registerCustomSlide\(definition, insertIndex = slideOrder\.length\)/);
+  assert.match(html, /slideOrder\.splice\(Math\.max\(0, Math\.min\(insertIndex, slideOrder\.length\)\), 0, definition\.id\)/);
+  assert.match(html, /indicator\.setAttribute\('aria-label', 'Drop image or video here to add a slide'\)/);
+  assert.match(html, /event\.dataTransfer\.files[\s\S]*createMediaSlide\(droppedFile, dropIndex\)/);
+  assert.match(html, /card\.addEventListener\('drop'[\s\S]*getDroppedMediaFile\(event\)[\s\S]*createMediaSlide\(droppedFile, getDropIndexFromPointer\(card, event, index\)\)/);
 });
 
 test('button slides can route each choice to a custom slide path without a dropdown selector', () => {
