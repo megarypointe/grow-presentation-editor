@@ -126,10 +126,14 @@ test('editor has an explicit reliable save button and warns about unsaved change
   assert.match(html, /let hasUnsavedChanges = false/);
   assert.match(html, /function markPresentationDirty\(/);
   assert.match(html, /function updateSaveState\(/);
+  assert.match(html, /async function ensureEditorSession\(/);
   assert.match(html, /async function performSaveActivePresentation\(/);
   assert.match(html, /async function saveActivePresentation\(options = \{\}\)/);
+  assert.match(html, /if \(!currentUser && !\(await ensureEditorSession\(\)\)\) return false/);
   assert.match(html, /saveQueue = saveQueue\.then\(\(\) => performSaveActivePresentation\(payload, options\)\)/);
   assert.match(html, /savePresentationButton\?\.addEventListener\('click', \(\) => saveActivePresentation\(\{ userInitiated: true \}\)\)/);
+  assert.match(html, /async function openEditor\(\)[\s\S]*if \(!currentUser && !\(await ensureEditorSession\(\)\)\) return/);
+  assert.match(html, /openEditor\(\)/);
   assert.match(html, /window\.addEventListener\('beforeunload'[\s\S]*hasUnsavedChanges/);
 });
 

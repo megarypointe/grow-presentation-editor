@@ -1952,6 +1952,12 @@
       }
     }
 
+    async function ensureEditorSession() {
+      if (currentUser) return true;
+      editorStatus.textContent = 'Log in before editing or saving this slideshow.';
+      return requireSession();
+    }
+
     function showAuthenticatedChrome() {
       loginPanel.hidden = true;
       resetPasswordPanel.hidden = true;
@@ -2190,6 +2196,7 @@
     async function saveActivePresentation(options = {}) {
       const payload = syncActivePresentationState();
       if (!payload) return false;
+      if (!currentUser && !(await ensureEditorSession())) return false;
       saveQueue = saveQueue.then(() => performSaveActivePresentation(payload, options));
       return saveQueue;
     }
@@ -3251,7 +3258,8 @@
       activeForm.querySelector('input, select')?.focus();
     }
 
-    function openEditor() {
+    async function openEditor() {
+      if (!currentUser && !(await ensureEditorSession())) return;
       if (getRequestedPresentationId() && activePresentationId) {
         editPresentation(activePresentationId);
         return;
