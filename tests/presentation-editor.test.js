@@ -58,6 +58,9 @@ test('clicking a slideshow presents it and menu actions manage it', () => {
   assert.match(html, /function duplicatePresentation\(/);
   assert.match(html, /function deletePresentation\(/);
   assert.match(html, /function togglePresentationMenu\(/);
+  assert.doesNotMatch(html, /if \(presentations\.length <= 1\) return;/);
+  assert.match(html, /activePresentationId = presentations\[0\]\?\.id \|\| ''/);
+  assert.match(html, /if \(!activePresentation\) \{[\s\S]*?renderPresentationManager\(\);[\s\S]*?return;/);
 });
 
 test('slide editor is a separate page and does not show library buttons or menus', () => {

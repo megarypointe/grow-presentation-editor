@@ -2328,11 +2328,10 @@
     }
 
     async function deletePresentation(presentationId) {
-      if (presentations.length <= 1) return;
       try {
         await apiRequest(`/${encodeURIComponent(presentationId)}`, { method: 'DELETE' });
         presentations = presentations.filter((presentation) => presentation.id !== presentationId);
-        if (activePresentationId === presentationId) activePresentationId = presentations[0].id;
+        if (activePresentationId === presentationId) activePresentationId = presentations[0]?.id || '';
         rebuildPresentation();
       } catch (error) {
         editorStatus.textContent = 'Could not delete that slideshow on the server.';
@@ -2341,7 +2340,19 @@
 
     function rebuildPresentation() {
       loadPresentationState();
-      if (!activePresentation) return;
+      if (!activePresentation) {
+        customSlides = [];
+        deletedSlideIds = [];
+        slideDefinitions = [];
+        slideOrder = [];
+        deck.innerHTML = '';
+        slideElementsById.clear();
+        slides = [];
+        editorGrid.innerHTML = '';
+        if (pathwayMap) pathwayMap.innerHTML = '';
+        renderPresentationManager();
+        return;
+      }
       currentSlide = 0;
       renderDeckSlides();
       applySlideOrder(slideOrder[0]);
