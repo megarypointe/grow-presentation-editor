@@ -97,6 +97,7 @@ test('walkthrough domain is the management page and presentation cards link to u
 test('slideshow data is loaded and saved through the Cloudflare API, not browser storage', () => {
   assert.match(html, /const PRESENTATION_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/presentations'/);
   assert.match(html, /async function apiRequest\(/);
+  assert.match(html, /cache:\s*'no-store'/);
   assert.match(html, /async function loadPresentations\(/);
   assert.match(html, /return requestJson\(PRESENTATION_API_URL, path, options\)/);
   assert.match(html, /method:\s*'PUT'/);
