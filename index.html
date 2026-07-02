@@ -1162,6 +1162,17 @@
       box-shadow: 0 16px 42px rgba(0, 0, 0, 0.24);
     }
 
+    .flow-card-main {
+      width: 100%;
+      display: block;
+      border: 0;
+      padding: 0;
+      border-radius: 12px;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+
     .flow-card-thumbnail {
       aspect-ratio: 16 / 9;
       display: grid;
@@ -2355,6 +2366,51 @@
       renderEditorCards();
     }
 
+    function getUniqueDuplicateSlideId(slideId) {
+      const safeBase = String(slideId || 'slide').replace(/[^a-z0-9-]/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'slide';
+      let candidate = `${safeBase}-copy`;
+      let suffix = 2;
+      while (slideDefinitions.some((slide) => slide.id === candidate) || customSlides.some((slide) => slide.id === candidate)) {
+        candidate = `${safeBase}-copy-${suffix}`;
+        suffix += 1;
+      }
+      return candidate;
+    }
+
+    function cloneSlideDefinitionForDuplicate(slideId) {
+      const source = slideDefinitions.find((slide) => slide.id === slideId);
+      if (!source) return null;
+      const duplicateId = getUniqueDuplicateSlideId(slideId);
+      const duplicate = JSON.parse(JSON.stringify(source));
+      duplicate.id = duplicateId;
+      duplicate.title = `${source.title || source.question || 'Slide'} Copy`;
+      if (duplicate.kind === 'custom-slider' || duplicate.kind === 'custom-buttons') {
+        duplicate.question = source.question || duplicate.title;
+      }
+      if (duplicate.kind === 'custom-buttons') {
+        duplicate.choices = (source.choices || [])
+          .map(normalizeButtonChoice)
+          .map((choice, index) => ensureButtonChoiceBranch({ ...choice, branchId: '' }, index, duplicateId));
+      }
+      return duplicate;
+    }
+
+    function duplicateSlide(slideId) {
+      const duplicate = cloneSlideDefinitionForDuplicate(slideId);
+      if (!duplicate) return;
+      customSlides.push(duplicate);
+      refreshSlideDefinitions();
+      renderDeckSlides();
+      const sourceIndex = slideOrder.indexOf(slideId);
+      const insertIndex = sourceIndex >= 0 ? sourceIndex + 1 : slideOrder.length;
+      slideOrder.splice(insertIndex, 0, duplicate.id);
+      saveCustomSlides();
+      persistSlideOrder();
+      applySlideOrder(duplicate.id);
+      renderEditorCards();
+      editorStatus.textContent = `Duplicated ${getSlideCardTitle(slideId)}.`;
+    }
+
     function getSliderNumberRange() {
       const min = Number(sliderMinInput.value);
       const max = Number(sliderMaxInput.value);
@@ -2554,12 +2610,26 @@
       return true;
     }
 
+    function renderSlideOptionsMenu(slideId, canEdit = false) {
+      return `
+        <button class="card-menu-button" type="button" aria-label="Slide options" aria-expanded="false">⋯</button>
+        <div class="card-menu" hidden>
+          ${canEdit ? '<button type="button" data-card-action="edit">Edit</button>' : ''}
+          <button type="button" data-card-action="duplicate">Duplicate</button>
+          <button type="button" data-card-action="delete">Delete</button>
+        </div>
+      `;
+    }
+
     function renderPathwayStepCard(slideId, index, kicker = `Slide ${slideOrder.indexOf(slideId) + 1}`) {
       const definition = slideDefinitions.find((slide) => slide.id === slideId);
       return `
-        <button class="flow-slide-card" type="button" draggable="true" data-pathway-slide-id="${escapeAttribute(slideId)}" aria-label="${escapeAttribute(getSlideCardTitle(slideId, index))}">
-          <figure class="flow-card-thumbnail">${renderThumbnail(definition)}</figure>
-        </button>
+        <article class="flow-slide-card" draggable="true" data-pathway-slide-id="${escapeAttribute(slideId)}" aria-label="${escapeAttribute(getSlideCardTitle(slideId, index))}">
+          <button class="flow-card-main" type="button" data-pathway-card-preview="true" aria-label="Preview ${escapeAttribute(getSlideCardTitle(slideId, index))}">
+            <figure class="flow-card-thumbnail">${renderThumbnail(definition)}</figure>
+          </button>
+          ${renderSlideOptionsMenu(slideId)}
+        </article>
       `;
     }
 
@@ -2572,9 +2642,12 @@
           <section class="pathway-map-board" data-pathway-hub-id="${escapeAttribute(hub.id)}">
             <div class="flow-linear-row" aria-label="Normal slides before this button slide">
               ${normalSlides.map((slideId, index) => renderPathwayStepCard(slideId, index)).join('')}
-              <button class="flow-slide-card flow-hub-card" type="button" data-pathway-slide-id="${escapeAttribute(hub.id)}" aria-label="${escapeAttribute(hub.question || hub.title || 'Choose a path')}">
-                <figure class="flow-card-thumbnail">${renderThumbnail(hub)}</figure>
-              </button>
+              <article class="flow-slide-card flow-hub-card" data-pathway-slide-id="${escapeAttribute(hub.id)}" aria-label="${escapeAttribute(hub.question || hub.title || 'Choose a path')}">
+                <button class="flow-card-main" type="button" data-pathway-card-preview="true" aria-label="Edit ${escapeAttribute(hub.question || hub.title || 'button slide')}">
+                  <figure class="flow-card-thumbnail">${renderThumbnail(hub)}</figure>
+                </button>
+                ${renderSlideOptionsMenu(hub.id, true)}
+              </article>
             </div>
             <div class="flow-branch-board">
               ${choices.map((choice, choiceIndex) => {
@@ -2595,6 +2668,10 @@
           </section>
         `;
       }).join('');
+
+      pathwayMap.querySelectorAll('.flow-slide-card').forEach((card) => {
+        attachSlideOptionsMenu(card, card.dataset.pathwaySlideId);
+      });
 
       pathwayMap.querySelectorAll('.flow-hub-card').forEach((button) => {
         const hub = slideDefinitions.find((slide) => slide.id === button.dataset.pathwaySlideId);
@@ -2931,13 +3008,7 @@
                       : '<div class="slide-card-placeholder">Slide</div>'}
           </div>
           ${branchStartLabels.length ? `<div class="branch-badges" aria-label="Branch starts here">${branchStartLabels.map((label) => `<span class="branch-badge">Branch starts here: ${escapeAttribute(label)}</span>`).join('')}</div>` : ''}
-          ${(canEdit || canDelete) ? `
-            <button class="card-menu-button" type="button" aria-label="Slide options" aria-expanded="false">⋯</button>
-            <div class="card-menu" hidden>
-              ${canEdit ? '<button type="button" data-card-action="edit">Edit</button>' : ''}
-              ${canDelete ? '<button type="button" data-card-action="delete">Delete</button>' : ''}
-            </div>
-          ` : ''}
+          ${(canEdit || canDelete) ? renderSlideOptionsMenu(slideId, canEdit) : ''}
         `;
 
         card.addEventListener('dragstart', (event) => {
@@ -2967,23 +3038,29 @@
           }
         });
 
-        card.querySelector('.card-menu-button')?.addEventListener('click', (event) => {
-          event.stopPropagation();
-          toggleCardMenu(card);
-        });
-        card.querySelector('[data-card-action="delete"]')?.addEventListener('click', () => deleteSlide(slideId));
-        card.querySelector('[data-card-action="edit"]')?.addEventListener('click', () => editCustomSlide(slideId));
+        attachSlideOptionsMenu(card, slideId);
 
         editorGrid.appendChild(card);
       });
       editorGrid.appendChild(renderDropIndicators(slideOrder.length));
     }
 
+    function attachSlideOptionsMenu(card, slideId) {
+      card.querySelector('.card-menu-button')?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        toggleCardMenu(card);
+      });
+      card.querySelector('.card-menu')?.addEventListener('click', (event) => event.stopPropagation());
+      card.querySelector('[data-card-action="duplicate"]')?.addEventListener('click', () => duplicateSlide(slideId));
+      card.querySelector('[data-card-action="delete"]')?.addEventListener('click', () => deleteSlide(slideId));
+      card.querySelector('[data-card-action="edit"]')?.addEventListener('click', () => editCustomSlide(slideId));
+    }
+
     function toggleCardMenu(card, forceOpen) {
       const menu = card.querySelector('.card-menu');
       const button = card.querySelector('.card-menu-button');
       if (!menu || !button) return;
-      editorGrid.querySelectorAll('.card-menu').forEach((otherMenu) => {
+      document.querySelectorAll('.card-menu').forEach((otherMenu) => {
         if (otherMenu !== menu) {
           otherMenu.hidden = true;
           otherMenu.previousElementSibling?.setAttribute('aria-expanded', 'false');
@@ -3230,9 +3307,9 @@
       if (!addMenu.hidden && !event.target.closest('.editor-title-row')) {
         toggleAddMenu(false);
       }
-      if (!event.target.closest('.slide-card')) {
-        editorGrid.querySelectorAll('.card-menu').forEach((menu) => { menu.hidden = true; });
-        editorGrid.querySelectorAll('.card-menu-button').forEach((button) => button.setAttribute('aria-expanded', 'false'));
+      if (!event.target.closest('.slide-card') && !event.target.closest('.flow-slide-card')) {
+        document.querySelectorAll('.card-menu').forEach((menu) => { menu.hidden = true; });
+        document.querySelectorAll('.card-menu-button').forEach((button) => button.setAttribute('aria-expanded', 'false'));
       }
       if (!event.target.closest('.slideshow-card')) {
         presentationList.querySelectorAll('.slideshow-menu').forEach((menu) => { menu.hidden = true; });

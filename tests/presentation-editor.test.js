@@ -169,6 +169,17 @@ test('slides are draggable and dropped order is persisted in edit mode', () => {
   assert.match(html, /saveActivePresentation\(\)/);
 });
 
+test('editing a slideshow gives each slide a three-dot menu with duplicate and delete actions', () => {
+  assert.match(html, /class="card-menu-button"[\s\S]*aria-label="Slide options"/);
+  assert.match(html, /data-card-action="duplicate"[\s\S]*Duplicate/);
+  assert.match(html, /data-card-action="delete"[\s\S]*Delete/);
+  assert.match(html, /function duplicateSlide\(/);
+  assert.match(html, /cloneSlideDefinitionForDuplicate\(/);
+  assert.match(html, /card\.querySelector\('\[data-card-action="duplicate"\]'\)\?\.addEventListener\('click', \(\) => duplicateSlide\(slideId\)\)/);
+  assert.match(html, /function renderSlideOptionsMenu\(/);
+  assert.match(html, /renderPathwayStepCard[\s\S]*renderSlideOptionsMenu\(slideId/);
+});
+
 test('editor can add slider-question, button-choice, and media slides from hidden panels', () => {
   assert.match(html, /id="addSliderForm"/);
   assert.match(html, /id="sliderQuestionInput"/);
