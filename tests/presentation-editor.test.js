@@ -119,6 +119,20 @@ test('direct presentation URLs load the requested slideshow before requiring edi
   assert.match(html, /if \(!currentUser && !\(await requireSession\(\)\)\) \{/);
 });
 
+test('editor has an explicit reliable save button and warns about unsaved changes', () => {
+  assert.match(html, /id="savePresentationButton"[\s\S]*>Save Changes<\/button>/);
+  assert.match(html, /id="saveStateBadge"/);
+  assert.match(html, /let saveQueue = Promise\.resolve\(\)/);
+  assert.match(html, /let hasUnsavedChanges = false/);
+  assert.match(html, /function markPresentationDirty\(/);
+  assert.match(html, /function updateSaveState\(/);
+  assert.match(html, /async function performSaveActivePresentation\(/);
+  assert.match(html, /async function saveActivePresentation\(options = \{\}\)/);
+  assert.match(html, /saveQueue = saveQueue\.then\(\(\) => performSaveActivePresentation\(payload, options\)\)/);
+  assert.match(html, /savePresentationButton\?\.addEventListener\('click', \(\) => saveActivePresentation\(\{ userInitiated: true \}\)\)/);
+  assert.match(html, /window\.addEventListener\('beforeunload'[\s\S]*hasUnsavedChanges/);
+});
+
 test('users log in with email and password and can use forgot-password reset flow', () => {
   assert.match(html, /const AUTH_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/auth'/);
   assert.match(html, /const USERS_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/users'/);

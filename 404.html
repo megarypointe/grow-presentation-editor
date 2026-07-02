@@ -709,6 +709,23 @@
       gap: 14px;
     }
 
+    .save-state-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.5);
+      color: #cbd5e1;
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    .save-state-badge.unsaved { color: #fde68a; background: rgba(180, 83, 9, 0.18); }
+    .save-state-badge.saving { color: #bfdbfe; background: rgba(37, 99, 235, 0.18); }
+    .save-state-badge.saved { color: #bbf7d0; background: rgba(22, 101, 52, 0.18); }
+    .save-state-badge.error { color: #fecaca; background: rgba(185, 28, 28, 0.2); }
+
     .library-header .auth-actions {
       margin-left: auto;
     }
@@ -1578,6 +1595,8 @@
               <button class="add-menu-option" type="button" data-tool="buttons">Add Buttons</button>
               <button class="add-menu-option" type="button" data-tool="media">Add Slide</button>
             </div>
+            <button id="savePresentationButton" class="tool-button" type="button">Save Changes</button>
+            <span class="save-state-badge saved" id="saveStateBadge" aria-live="polite">Saved</span>
           </div>
         </header>
         <div class="editor-tools" aria-label="Add slides">
@@ -1686,6 +1705,8 @@
     const presentationNameInput = document.querySelector('#presentationNameInput');
     const openEditorButton = document.querySelector('#openEditorButton');
     const addMenuButton = document.querySelector('#addMenuButton');
+    const savePresentationButton = document.querySelector('#savePresentationButton');
+    const saveStateBadge = document.querySelector('#saveStateBadge');
     const addMenu = document.querySelector('#addMenu');
     const addMenuOptions = document.querySelectorAll('[data-tool]');
     const addSliderForm = document.querySelector('#addSliderForm');
@@ -1703,6 +1724,8 @@
     let defaultSlideOrder = [];
     const slideElementsById = new Map();
     let slideOrder = [];
+    let saveQueue = Promise.resolve();
+    let hasUnsavedChanges = false;
     let slides = [];
     let currentSlide = 0;
     let draggedSlideId = null;
@@ -1812,13 +1835,37 @@
       });
     }
 
-    function saveCustomSlides() {
+    function updateSaveState(state = 'saved', message = '') {
+      if (!saveStateBadge) return;
+      saveStateBadge.className = `save-state-badge ${state}`;
+      saveStateBadge.textContent = message || (state === 'saved' ? 'Saved' : state === 'saving' ? 'Saving…' : state === 'error' ? 'Save failed' : 'Unsaved changes');
+      if (savePresentationButton) savePresentationButton.disabled = state === 'saving';
+    }
+
+    function markPresentationDirty(message = 'Unsaved changes') {
+      hasUnsavedChanges = true;
+      updateSaveState('unsaved', message);
+    }
+
+    function syncActivePresentationState() {
+      if (!activePresentation) return null;
       activePresentation.customSlides = customSlides;
+      activePresentation.deletedSlideIds = deletedSlideIds;
+      activePresentation.slideOrder = slideOrder;
+      return JSON.parse(JSON.stringify(activePresentation));
+    }
+
+    function saveCustomSlides() {
+      if (!activePresentation) return;
+      activePresentation.customSlides = customSlides;
+      markPresentationDirty();
       saveActivePresentation();
     }
 
     function saveDeletedSlideIds() {
+      if (!activePresentation) return;
       activePresentation.deletedSlideIds = deletedSlideIds;
+      markPresentationDirty();
       saveActivePresentation();
     }
 
@@ -2111,23 +2158,40 @@
       activePresentation.slideOrder = slideOrder;
     }
 
-    async function saveActivePresentation() {
-      if (!activePresentation) return;
-      activePresentation.customSlides = customSlides;
-      activePresentation.deletedSlideIds = deletedSlideIds;
-      activePresentation.slideOrder = slideOrder;
+    async function performSaveActivePresentation(payload, options = {}) {
+      if (!payload) return false;
+      updateSaveState('saving', options.userInitiated ? 'Saving now…' : 'Saving…');
       try {
-        const data = await apiRequest(`/${encodeURIComponent(activePresentation.id)}`, {
+        const data = await apiRequest(`/${encodeURIComponent(payload.id)}`, {
           method: 'PUT',
-          body: JSON.stringify(activePresentation)
+          body: JSON.stringify(payload)
         });
         const saved = normalizePresentationRecord(data.presentation);
         const index = presentations.findIndex((presentation) => presentation.id === saved.id);
         if (index >= 0) presentations[index] = saved;
-        activePresentation = presentations.find((presentation) => presentation.id === saved.id) || saved;
+        if (activePresentationId === saved.id) {
+          activePresentation = presentations.find((presentation) => presentation.id === saved.id) || saved;
+          customSlides = Array.isArray(activePresentation.customSlides) ? activePresentation.customSlides : [];
+          deletedSlideIds = Array.isArray(activePresentation.deletedSlideIds) ? activePresentation.deletedSlideIds : [];
+          slideOrder = Array.isArray(activePresentation.slideOrder) ? activePresentation.slideOrder : slideOrder;
+        }
+        hasUnsavedChanges = false;
+        updateSaveState('saved', 'Saved');
+        if (options.userInitiated) editorStatus.textContent = 'Saved changes to the presentation server.';
+        return true;
       } catch (error) {
-        editorStatus.textContent = 'Could not save to the presentation server. Try again in a moment.';
+        hasUnsavedChanges = true;
+        updateSaveState('error', 'Save failed — click Save Changes');
+        editorStatus.textContent = 'Could not save to the presentation server. Click Save Changes to retry.';
+        return false;
       }
+    }
+
+    async function saveActivePresentation(options = {}) {
+      const payload = syncActivePresentationState();
+      if (!payload) return false;
+      saveQueue = saveQueue.then(() => performSaveActivePresentation(payload, options));
+      return saveQueue;
     }
 
     async function createPresentation(name) {
@@ -2149,6 +2213,8 @@
       if (!presentations.some((presentation) => presentation.id === presentationId)) return;
       activePresentationId = presentationId;
       rebuildPresentation();
+      hasUnsavedChanges = false;
+      updateSaveState('saved', 'Saved');
       editorStatus.textContent = '';
     }
 
@@ -2935,8 +3001,9 @@
 
     function persistSlideOrder() {
       activePresentation.slideOrder = slideOrder;
+      markPresentationDirty();
       saveActivePresentation();
-      editorStatus.textContent = `Saved order for ${slideOrder.length} slides.`;
+      editorStatus.textContent = `Saving order for ${slideOrder.length} slides…`;
     }
 
     function applySlideOrder(keepCurrentSlideId = slideOrder[currentSlide]) {
@@ -3328,6 +3395,12 @@
     });
     newPresentationButton?.addEventListener('click', () => toggleCreatePresentationForm());
     addMenuButton?.addEventListener('click', () => toggleAddMenu());
+    savePresentationButton?.addEventListener('click', () => saveActivePresentation({ userInitiated: true }));
+    window.addEventListener('beforeunload', (event) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = '';
+    });
     addMenuOptions.forEach((option) => {
       option.addEventListener('click', () => showToolPanel(option.dataset.tool));
     });
