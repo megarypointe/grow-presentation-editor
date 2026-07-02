@@ -6,6 +6,7 @@ const path = require('node:path');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
 test('page asks browsers not to reuse stale editor HTML', () => {
+  assert.match(html, /<link rel="icon" type="image\/svg\+xml" href="\/favicon\.svg" \/>/);
   assert.match(html, /http-equiv="Cache-Control"/);
   assert.match(html, /no-store, no-cache, must-revalidate, max-age=0/);
   assert.match(html, /http-equiv="Pragma"/);
