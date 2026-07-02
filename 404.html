@@ -2078,6 +2078,15 @@
       }
     }
 
+    async function loadPublicPresentation(presentationId) {
+      try {
+        const data = await apiRequest(`/${encodeURIComponent(presentationId)}`);
+        return data.presentation ? normalizePresentationRecord(data.presentation) : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
     function getRequestedPresentationId() {
       const pathId = window.location.pathname.replace(/^\/+|\/+$/g, '');
       return /^\d{7}$/.test(pathId) ? pathId : '';
@@ -3251,6 +3260,18 @@
         showResetPasswordPanel();
         return;
       }
+      const requestedPresentationId = getRequestedPresentationId();
+      if (requestedPresentationId) {
+        const publicPresentation = await loadPublicPresentation(requestedPresentationId);
+        if (publicPresentation) {
+          presentations = [publicPresentation];
+          activePresentationId = requestedPresentationId;
+          editorStatus.textContent = '';
+          rebuildPresentation();
+          showPresentationPage(requestedPresentationId);
+          return;
+        }
+      }
       if (!currentUser && !(await requireSession())) {
         return;
       }
@@ -3258,7 +3279,6 @@
       presentations = await loadPresentations();
       if (!presentations) return;
       activePresentationId = loadActivePresentationId(presentations);
-      const requestedPresentationId = getRequestedPresentationId();
       editorStatus.textContent = '';
       rebuildPresentation();
       if (requestedPresentationId && presentations.some((presentation) => presentation.id === requestedPresentationId)) {

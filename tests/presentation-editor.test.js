@@ -112,6 +112,13 @@ test('slideshow data is loaded and saved through the Cloudflare API, not browser
 });
 
 
+test('direct presentation URLs load the requested slideshow before requiring editor login', () => {
+  assert.match(html, /async function loadPublicPresentation\(/);
+  assert.match(html, /apiRequest\(`\/\$\{encodeURIComponent\(presentationId\)\}`\)/);
+  assert.match(html, /if \(requestedPresentationId\) \{[\s\S]*?const publicPresentation = await loadPublicPresentation\(requestedPresentationId\);[\s\S]*?showPresentationPage\(requestedPresentationId\);[\s\S]*?return;/);
+  assert.match(html, /if \(!currentUser && !\(await requireSession\(\)\)\) \{/);
+});
+
 test('users log in with email and password and can use forgot-password reset flow', () => {
   assert.match(html, /const AUTH_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/auth'/);
   assert.match(html, /const USERS_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/users'/);
