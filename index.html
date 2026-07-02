@@ -1637,6 +1637,7 @@
     const PRESENTATION_API_URL = 'https://grow-api.kennygpt.org/api/presentations';
     const AUTH_API_URL = 'https://grow-api.kennygpt.org/api/auth';
     const USERS_API_URL = 'https://grow-api.kennygpt.org/api/users';
+    const MEDIA_API_URL = 'https://grow-api.kennygpt.org/api/media';
     const AUTH_TOKEN_STORAGE_KEY = 'growPresentationAuthToken';
     const MANAGEMENT_HOST = 'walkthrough.growpage.org';
     const pdfSlides = [
@@ -1801,7 +1802,7 @@
       if (definition.kind === 'media-image') {
         section.innerHTML = `
           <figure class="media-frame">
-            <img src="${definition.dataUrl}" alt="${definition.title}" loading="lazy" decoding="async" />
+            <img src="${getMediaSource(definition)}" alt="${definition.title}" loading="lazy" decoding="async" />
           </figure>
         `;
       }
@@ -1809,7 +1810,7 @@
       if (definition.kind === 'media-video') {
         section.innerHTML = `
           <figure class="media-frame">
-            <video src="${definition.dataUrl}" controls playsinline></video>
+            <video src="${getMediaSource(definition)}" controls playsinline></video>
           </figure>
         `;
       }
@@ -1817,7 +1818,7 @@
       if (definition.kind === 'media-pdf' || definition.kind === 'media-embed') {
         section.innerHTML = `
           <figure class="media-frame">
-            <iframe src="${definition.dataUrl}" title="${definition.title}"></iframe>
+            <iframe src="${getMediaSource(definition)}" title="${definition.title}"></iframe>
           </figure>
         `;
       }
@@ -1845,6 +1846,14 @@
     function markPresentationDirty(message = 'Unsaved changes') {
       hasUnsavedChanges = true;
       updateSaveState('unsaved', message);
+    }
+
+    function getMediaSource(definition) {
+      return definition?.mediaUrl || definition?.dataUrl || '';
+    }
+
+    function hasEmbeddedMedia(definition) {
+      return /^(media-image|media-video)$/.test(definition?.kind || '') && /^data:(image|video)\//.test(definition?.dataUrl || '');
     }
 
     function syncActivePresentationState() {
@@ -1922,6 +1931,10 @@
 
     async function apiRequest(path = '', options = {}) {
       return requestJson(PRESENTATION_API_URL, path, options);
+    }
+
+    async function mediaRequest(path = '', options = {}) {
+      return requestJson(MEDIA_API_URL, path, options);
     }
 
     function storeAuthToken(sessionToken = '') {
@@ -2164,13 +2177,39 @@
       activePresentation.slideOrder = slideOrder;
     }
 
+    async function uploadEmbeddedMediaSlide(definition) {
+      if (!hasEmbeddedMedia(definition)) return definition;
+      const data = await mediaRequest('', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: definition.title || 'Uploaded slide',
+          mimeType: definition.mimeType || '',
+          dataUrl: definition.dataUrl
+        })
+      });
+      const { dataUrl, ...withoutDataUrl } = definition;
+      return {
+        ...withoutDataUrl,
+        mediaUrl: data.mediaUrl
+      };
+    }
+
+    async function externalizeEmbeddedMedia(payload) {
+      const embeddedSlides = (payload.customSlides || []).filter(hasEmbeddedMedia);
+      if (!embeddedSlides.length) return payload;
+      updateSaveState('saving', embeddedSlides.length === 1 ? 'Uploading media…' : `Uploading ${embeddedSlides.length} media files…`);
+      payload.customSlides = await Promise.all((payload.customSlides || []).map(uploadEmbeddedMediaSlide));
+      return payload;
+    }
+
     async function performSaveActivePresentation(payload, options = {}) {
       if (!payload) return false;
       updateSaveState('saving', options.userInitiated ? 'Saving now…' : 'Saving…');
       try {
-        const data = await apiRequest(`/${encodeURIComponent(payload.id)}`, {
+        const savePayload = await externalizeEmbeddedMedia(payload);
+        const data = await apiRequest(`/${encodeURIComponent(savePayload.id)}`, {
           method: 'PUT',
-          body: JSON.stringify(payload)
+          body: JSON.stringify(savePayload)
         });
         const saved = normalizePresentationRecord(data.presentation);
         const index = presentations.findIndex((presentation) => presentation.id === saved.id);
@@ -2248,7 +2287,7 @@
         return `<img src="assets/slides/${thumbnail.file}" alt="${escapeAttribute(thumbnail.title)} thumbnail" loading="eager" decoding="async" />`;
       }
       if (thumbnail.kind === 'media-image') {
-        return `<img src="${thumbnail.dataUrl}" alt="${escapeAttribute(thumbnail.title)} thumbnail" loading="eager" decoding="async" />`;
+        return `<img src="${getMediaSource(thumbnail)}" alt="${escapeAttribute(thumbnail.title)} thumbnail" loading="eager" decoding="async" />`;
       }
       if (thumbnail.kind === 'media-video') return '<div class="slide-card-placeholder">Video</div>';
       if (thumbnail.kind === 'media-pdf') return '<div class="slide-card-placeholder">PDF</div>';
@@ -3095,7 +3134,7 @@
             ${definition.kind === 'image'
               ? `<img src="assets/slides/${definition.file}" alt="${definition.title} thumbnail" loading="lazy" decoding="async" />`
               : definition.kind === 'media-image'
-                ? `<img src="${definition.dataUrl}" alt="${definition.title} thumbnail" loading="lazy" decoding="async" />`
+                ? `<img src="${getMediaSource(definition)}" alt="${definition.title} thumbnail" loading="lazy" decoding="async" />`
                 : definition.kind === 'media-video'
                   ? '<div class="slide-card-placeholder">Video</div>'
                   : definition.kind === 'media-pdf'

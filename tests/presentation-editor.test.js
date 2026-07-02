@@ -101,10 +101,13 @@ test('API list is authoritative and never re-adds deleted default slideshows loc
 
 test('slideshow data is loaded and saved through the Cloudflare API, not browser storage', () => {
   assert.match(html, /const PRESENTATION_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/presentations'/);
+  assert.match(html, /const MEDIA_API_URL = 'https:\/\/grow-api\.kennygpt\.org\/api\/media'/);
   assert.match(html, /async function apiRequest\(/);
+  assert.match(html, /async function mediaRequest\(/);
   assert.match(html, /cache:\s*'no-store'/);
   assert.match(html, /async function loadPresentations\(/);
   assert.match(html, /return requestJson\(PRESENTATION_API_URL, path, options\)/);
+  assert.match(html, /return requestJson\(MEDIA_API_URL, path, options\)/);
   assert.match(html, /method:\s*'PUT'/);
   assert.match(html, /method:\s*'DELETE'/);
   assert.match(html, /duplicate/);
@@ -127,6 +130,9 @@ test('editor has an explicit reliable save button and warns about unsaved change
   assert.match(html, /function markPresentationDirty\(/);
   assert.match(html, /function updateSaveState\(/);
   assert.match(html, /async function ensureEditorSession\(/);
+  assert.match(html, /async function externalizeEmbeddedMedia\(/);
+  assert.match(html, /async function uploadEmbeddedMediaSlide\(/);
+  assert.match(html, /const savePayload = await externalizeEmbeddedMedia\(payload\)/);
   assert.match(html, /async function performSaveActivePresentation\(/);
   assert.match(html, /async function saveActivePresentation\(options = \{\}\)/);
   assert.match(html, /if \(!currentUser && !\(await ensureEditorSession\(\)\)\) return false/);
@@ -135,6 +141,16 @@ test('editor has an explicit reliable save button and warns about unsaved change
   assert.match(html, /async function openEditor\(\)[\s\S]*if \(!currentUser && !\(await ensureEditorSession\(\)\)\) return/);
   assert.match(html, /openEditor\(\)/);
   assert.match(html, /window\.addEventListener\('beforeunload'[\s\S]*hasUnsavedChanges/);
+});
+
+test('uploaded image and video slides are saved as media URLs instead of giant embedded JSON', () => {
+  assert.match(html, /function getMediaSource\(definition\)/);
+  assert.match(html, /function hasEmbeddedMedia\(definition\)/);
+  assert.match(html, /\^data:\(image\|video\)\\\//);
+  assert.match(html, /mediaUrl: data\.mediaUrl/);
+  assert.match(html, /const \{ dataUrl, \.\.\.withoutDataUrl \} = definition/);
+  assert.match(html, /src="\$\{getMediaSource\(definition\)\}"/);
+  assert.match(html, /src="\$\{getMediaSource\(thumbnail\)\}"/);
 });
 
 test('users log in with email and password and can use forgot-password reset flow', () => {
