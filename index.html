@@ -1840,12 +1840,7 @@
       };
     }
 
-    function createDefaultPresentations() {
-      return [
-        createPresentationRecord('9843754', 'Grow Presentation'),
-        createPresentationRecord('2381976', 'Second Presentation')
-      ];
-    }
+    const FALLBACK_PRESENTATIONS = [];
 
     function normalizePresentationRecord(presentation) {
       return createPresentationRecord(presentation.id, presentation.title, {
@@ -2072,20 +2067,14 @@
     async function loadPresentations() {
       try {
         const data = await apiRequest();
-        const presentationsToUse = Array.isArray(data.presentations) && data.presentations.length
-          ? data.presentations.map(normalizePresentationRecord)
-          : createDefaultPresentations().map(normalizePresentationRecord);
-        if (!presentationsToUse.some((presentation) => presentation.id === '2381976')) {
-          presentationsToUse.push(createPresentationRecord('2381976', 'Second Presentation'));
-        }
-        return presentationsToUse;
+        return Array.isArray(data.presentations) ? data.presentations.map(normalizePresentationRecord) : FALLBACK_PRESENTATIONS;
       } catch (error) {
         if (error.status === 401) {
           showLoginPanel();
           return null;
         }
-        editorStatus.textContent = 'Could not reach the presentation server. Showing the default slideshows for now.';
-        return createDefaultPresentations().map(normalizePresentationRecord);
+        editorStatus.textContent = 'Could not reach the presentation server. Try refreshing in a moment.';
+        return FALLBACK_PRESENTATIONS;
       }
     }
 

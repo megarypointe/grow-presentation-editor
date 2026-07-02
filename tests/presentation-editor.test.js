@@ -89,9 +89,14 @@ test('walkthrough domain is the management page and presentation cards link to u
   assert.match(html, /function showPresentationPage\(/);
   assert.match(html, /history\.pushState\(\{ presentationId \}, '', `\/\$\{encodeURIComponent\(presentationId\)\}`\)/);
   assert.match(html, /window\.addEventListener\('popstate'/);
-  assert.match(html, /createPresentationRecord\('9843754', 'Grow Presentation'\)/);
-  assert.match(html, /createPresentationRecord\('2381976', 'Second Presentation'\)/);
   assert.doesNotMatch(html, /id:\s*'grow-presentation'|id:\s*'second-presentation'/);
+});
+
+test('API list is authoritative and never re-adds deleted default slideshows locally', () => {
+  assert.match(html, /const FALLBACK_PRESENTATIONS = \[\]/);
+  assert.match(html, /Array\.isArray\(data\.presentations\)\s*\?\s*data\.presentations\.map\(normalizePresentationRecord\)\s*:\s*FALLBACK_PRESENTATIONS/);
+  assert.doesNotMatch(html, /presentationsToUse\.push\(createPresentationRecord\('2381976', 'Second Presentation'\)\)/);
+  assert.doesNotMatch(html, /createDefaultPresentations\(\)\.map\(normalizePresentationRecord\)/);
 });
 
 test('slideshow data is loaded and saved through the Cloudflare API, not browser storage', () => {
@@ -148,7 +153,6 @@ test('saved presentations are normalized so stale API data cannot blank the libr
   assert.match(html, /Array\.isArray\(presentation\.customSlides\)/);
   assert.match(html, /Array\.isArray\(presentation\.slideOrder\)/);
   assert.match(html, /\.map\(normalizePresentationRecord\)/);
-  assert.match(html, /createDefaultPresentations\(\)\.map\(normalizePresentationRecord\)/);
 });
 
 test('presentation-specific slide edits are isolated by active presentation', () => {
